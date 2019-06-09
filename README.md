@@ -8,9 +8,9 @@
 <!-- 可自定义数据源，建议使用链接池 -->
 <bean id="dataSource" class="org.apache.commons.dbcp2.BasicDataSource">
     <property name="driverClassName" value="com.mysql.jdbc.Driver"/>
-    <property name="url" value="jdbc:mysql://rm-uf63mb23fz2dz219x7o.mysql.rds.aliyuncs.com:3306/mall_se_scm" />
-    <property name="username" value="mall_se_dbo_test" />
-    <property name="password" value="mY$eMall1904" />
+    <property name="url" value="?" />
+    <property name="username" value="?" />
+    <property name="password" value="?" />
 </bean>
 
 <!-- weekOrm所使用的数据源，name是该数据源的名称 -->
