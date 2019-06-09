@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <bean id="dataSource" class="org.apache.commons.dbcp2.BasicDataSource">
+        <property name="driverClassName" value="com.mysql.jdbc.Driver"/>
+        <property name="url" value="jdbc:mysql://rm-uf63mb23fz2dz219x7o.mysql.rds.aliyuncs.com:3306/mall_se_scm" />
+        <property name="username" value="mall_se_dbo_test" />
+        <property name="password" value="mY$eMall1904" />
+    </bean>
+
+    <bean id="weekSource" class="wuk.week.orm.WeekSource">
+        <property name="name" value="test" />
+        <property name="dataSource" ref="dataSource" />
+    </bean>
+
+    <bean class="wuk.week.orm.WeekManager">
+        <property name="dataSources">
+            <list>
+                <ref bean="weekSource" />
+            </list>
+        </property>
+    </bean>
+</beans>
