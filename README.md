@@ -4,7 +4,7 @@
 简单使用指南，详细参见测试类
 ======
 1. spring配置
-```
+```xml
 <!-- 可自定义数据源，建议使用链接池 -->
 <bean id="dataSource" class="org.apache.commons.dbcp2.BasicDataSource">
     <property name="driverClassName" value="com.mysql.jdbc.Driver"/>
@@ -31,7 +31,7 @@
 ------
 
 2. orm实体定义
-```
+```java
 @WeekTable("test_member")
 public class MemberDTO {
 
@@ -96,7 +96,7 @@ public class MemberDTO {
 ------
 
 3. 操作方法
-```
+```java
 // insert
 // insert into test_member(username, phone, amount)
 // values(?, ?, ?)
