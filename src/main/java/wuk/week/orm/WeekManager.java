@@ -29,18 +29,10 @@ public class WeekManager {
     }
 
     public WeekTransaction begin(String name) {
-        return begin(name, Connection.TRANSACTION_READ_COMMITTED, true);
+        return begin(name, Connection.TRANSACTION_READ_COMMITTED);
     }
 
     public WeekTransaction begin(String name, int transactionIsolation) {
-        return begin(name, transactionIsolation, true);
-    }
-
-    public WeekTransaction begin(String name, boolean autoRollback) {
-        return begin(name, Connection.TRANSACTION_READ_COMMITTED, autoRollback);
-    }
-
-    public WeekTransaction begin(String name, int transactionIsolation, boolean autoRollback) {
         DataSource dataSource = findDataSource(name);
         if (dataSource == null) {
             throw new RuntimeException("找不到数据源[name=" + name + "]");
@@ -48,7 +40,7 @@ public class WeekManager {
 
         WeekTransaction transaction;
         try {
-            transaction = new WeekTransaction(name, dataSource, transactionIsolation, autoRollback);
+            transaction = new WeekTransaction(name, dataSource, transactionIsolation);
         } catch (SQLException e) {
             throw new RuntimeException("创建事务对象失败[name=" + name + "]");
         }

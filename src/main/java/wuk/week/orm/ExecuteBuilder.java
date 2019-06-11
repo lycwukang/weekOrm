@@ -194,7 +194,7 @@ public class ExecuteBuilder<T> {
 
         String sql = builder.toString();
         if (logger.isDebugEnabled()) {
-            logger.debug("执行sql:" + sql);
+            logger.debug("[week-orm]执行sql:" + sql);
         }
 
         return runAndReturnRows(sql, params, null);
@@ -230,7 +230,7 @@ public class ExecuteBuilder<T> {
 
         String sql = builder.toString();
         if (logger.isDebugEnabled()) {
-            logger.debug("执行sql:" + sql);
+            logger.debug("[week-orm]执行sql:" + sql);
         }
 
         return runAndReturnRows(sql, params, null);
@@ -292,7 +292,7 @@ public class ExecuteBuilder<T> {
 
         String sql = builder.toString();
         if (logger.isDebugEnabled()) {
-            logger.debug("执行sql:" + sql);
+            logger.debug("[week-orm]执行sql:" + sql);
         }
 
         return runAndReturnRows(sql, params, generatedKey);
@@ -366,12 +366,17 @@ public class ExecuteBuilder<T> {
 
         String sql = builder.toString();
         if (logger.isDebugEnabled()) {
-            logger.debug("执行sql:" + sql);
+            logger.debug("[week-orm]执行sql:" + sql);
         }
 
         Connection connection = null;
         try {
-            connection = transaction != null ? transaction.getConnection() : dataSource.getConnection();
+            if (transaction != null) {
+                connection = transaction.getConnection();
+            } else {
+                connection = dataSource.getConnection();
+                connection.setAutoCommit(false);
+            }
             try (PreparedStatement statement = connection.prepareStatement(sql)) {
                 beanDeclare.fillParams(statement, params);
                 try (ResultSet resultSet = statement.executeQuery()) {
@@ -383,13 +388,9 @@ public class ExecuteBuilder<T> {
                 }
             }
         } catch (SQLException e) {
-            if (transaction != null && transaction.isAutoRollback()) {
-                transaction.rollback();
-                throw new WeekTransactionException("操作数据库出错", e);
-            }
             throw new RuntimeException("操作数据库出错", e);
         } finally {
-            if (connection != null && transaction == null) {
+            if (transaction == null && connection != null) {
                 tryCloseConnection(connection);
             }
         }
@@ -398,7 +399,12 @@ public class ExecuteBuilder<T> {
     private int runAndReturnRows(String sql, List<Pair<Field, Object>> params, WeekGeneratedKey generatedKey) {
         Connection connection = null;
         try {
-            connection = transaction != null ? transaction.getConnection() : dataSource.getConnection();
+            if (transaction != null) {
+                connection = transaction.getConnection();
+            } else {
+                connection = dataSource.getConnection();
+                connection.setAutoCommit(false);
+            }
             int returnGeneratedKeys = generatedKey != null ? PreparedStatement.RETURN_GENERATED_KEYS : PreparedStatement.NO_GENERATED_KEYS;
             try (PreparedStatement statement = connection.prepareStatement(sql, returnGeneratedKeys)) {
                 beanDeclare.fillParams(statement, params);
@@ -411,13 +417,9 @@ public class ExecuteBuilder<T> {
                 return result;
             }
         } catch (SQLException e) {
-            if (transaction != null && transaction.isAutoRollback()) {
-                transaction.rollback();
-                throw new WeekTransactionException("操作数据库出错", e);
-            }
             throw new RuntimeException("操作数据库出错", e);
         } finally {
-            if (connection != null && transaction == null) {
+            if (transaction == null && connection != null) {
                 tryCloseConnection(connection);
             }
         }

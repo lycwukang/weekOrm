@@ -17,16 +17,13 @@ public class WeekTransaction {
     private Connection connection;
     // ======= 事务隔离等级
     private int transactionIsolation;
-    // ======= 发生错误是否自动回滚
-    private boolean autoRollback;
 
-    public WeekTransaction(String name, DataSource dataSource, int transactionIsolation, boolean autoRollback) throws SQLException {
+    public WeekTransaction(String name, DataSource dataSource, int transactionIsolation) throws SQLException {
         this.name = name;
         this.connection = dataSource.getConnection();
         this.connection.setAutoCommit(false);
         this.transactionIsolation = transactionIsolation;
         this.connection.setTransactionIsolation(transactionIsolation);
-        this.autoRollback = autoRollback;
     }
 
     /**
@@ -81,9 +78,5 @@ public class WeekTransaction {
 
     public int getTransactionIsolation() {
         return transactionIsolation;
-    }
-
-    public boolean isAutoRollback() {
-        return autoRollback;
     }
 }
