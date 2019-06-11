@@ -12,7 +12,22 @@
     <properties>
         <jdk.version>1.8</jdk.version>
         <skip.tests>true</skip.tests>
+        <repository.releases.name>saas-releases</repository.releases.name>
+        <repository.releases.url>http://172.30.2.103:8081/nexus/content/repositories/releases/</repository.releases.url>
+        <repository.snapshots.name>saas-snapshots</repository.snapshots.name>
+        <repository.snapshots.url>http://172.30.2.103:8081/nexus/content/repositories/snapshots/</repository.snapshots.url>
     </properties>
+
+    <distributionManagement>
+        <repository>
+            <id>${repository.releases.name}</id>
+            <url>${repository.releases.url}</url>
+        </repository>
+        <snapshotRepository>
+            <id>${repository.snapshots.name}</id>
+            <url>${repository.snapshots.url}</url>
+        </snapshotRepository>
+    </distributionManagement>
 
     <developers>
         <developer>

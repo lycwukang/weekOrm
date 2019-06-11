@@ -19,7 +19,7 @@ public class MemberDTO {
 
     @WeekColumn(value = "id", autoIncrement = true, primaryKey = true)
     private Long id;
-    @WeekColumn("create_date")
+    @WeekColumn(value = "create_date", defaultValue = true)
     private Date createDate;
     @WeekColumn("username")
     private String username;

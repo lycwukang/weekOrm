@@ -35,5 +35,5 @@ public @interface WeekColumn {
      * 是否有默认值
      * @return
      */
-    boolean defaultValue() default true;
+    boolean defaultValue() default false;
 }

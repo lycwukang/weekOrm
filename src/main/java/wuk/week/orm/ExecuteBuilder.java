@@ -14,12 +14,16 @@ public class ExecuteBuilder<T> {
 
     // ======= 此次操作的数据源
     private DataSource dataSource;
+    // ======= 事务控制器
+    private WeekTransaction transaction;
     // ======= 此次操作sql的主体对象，orm对象
     private Class<T> clazz;
     // ======= bean声明数据
     private BeanDeclare<T> beanDeclare;
     // ======= 操作sql的类型，select/insert/update/delete
     private ExecuteType type = null;
+    // ======= on duplicate key update，只在insert时使用
+    private boolean onDuplicateKeyUpdate = false;
     // ======= where条件，只在select/update/delete时使用
     private Where where = new WhereEmpty();
     // ======= select返回值，只在select时使用
@@ -37,8 +41,9 @@ public class ExecuteBuilder<T> {
     /////////////////////////////////// 临时变量
     private JoinType joinType = JoinType.and;
 
-    public ExecuteBuilder(DataSource dataSource, Class<T> clazz) {
+    public ExecuteBuilder(DataSource dataSource, WeekTransaction transaction, Class<T> clazz) {
         this.dataSource = dataSource;
+        this.transaction = transaction;
         this.clazz = clazz;
         this.beanDeclare = BeanDeclare.findDeclare(clazz);
     }
@@ -56,6 +61,11 @@ public class ExecuteBuilder<T> {
 
     public ExecuteBuilder<T> insert() {
         type = ExecuteType.insert;
+        return this;
+    }
+
+    public ExecuteBuilder<T> onDuplicateKeyUpdate() {
+        onDuplicateKeyUpdate = true;
         return this;
     }
 
@@ -172,19 +182,6 @@ public class ExecuteBuilder<T> {
         return insertExec(obj, generatedKey);
     }
 
-    private int execAndReturnRows(String sql, List<Pair<Field, Object>> params) {
-        try {
-            try(Connection connection = dataSource.getConnection()) {
-                try (PreparedStatement statement = connection.prepareStatement(sql)) {
-                    beanDeclare.fillParams(statement, params);
-                    return statement.executeUpdate();
-                }
-            }
-        } catch (SQLException e) {
-            throw new RuntimeException("操作数据库出错", e);
-        }
-    }
-
     private int deleteExec() {
         StringBuilder builder = new StringBuilder();
         builder.append("delete from ").append("`").append(beanDeclare.getTableName()).append("`");
@@ -200,7 +197,7 @@ public class ExecuteBuilder<T> {
             logger.debug("执行sql:" + sql);
         }
 
-        return execAndReturnRows(sql, params);
+        return runAndReturnRows(sql, params, null);
     }
 
     private int updateExec() {
@@ -236,7 +233,7 @@ public class ExecuteBuilder<T> {
             logger.debug("执行sql:" + sql);
         }
 
-        return execAndReturnRows(sql, params);
+        return runAndReturnRows(sql, params, null);
     }
 
     private int insertExec(T obj, WeekGeneratedKey generatedKey) {
@@ -275,28 +272,30 @@ public class ExecuteBuilder<T> {
         valueBuilder.append(")");
         builder.append(" values ").append(valueBuilder.toString());
 
+        if (onDuplicateKeyUpdate) {
+            if (setFields.size() == 0) {
+                throw new RuntimeException("on duplicate key update需要设置更新数据");
+            }
+
+            builder.append(" on duplicate key update ");
+
+            for (int i = 0; i < setFields.size(); i++) {
+                if (i > 0) {
+                    builder.append(", ");
+                }
+                Field field = setFields.get(i).getT();
+                Object value = setFields.get(i).getF();
+                builder.append("`").append(beanDeclare.getColumnName(field)).append("`").append(" = ").append("?");
+                params.add(new Pair<>(field, value));
+            }
+        }
+
         String sql = builder.toString();
         if (logger.isDebugEnabled()) {
             logger.debug("执行sql:" + sql);
         }
 
-        try {
-            try (Connection connection = dataSource.getConnection()) {
-                int returnGeneratedKeys = generatedKey != null ? PreparedStatement.RETURN_GENERATED_KEYS : PreparedStatement.NO_GENERATED_KEYS;
-                try (PreparedStatement statement = connection.prepareStatement(sql, returnGeneratedKeys)) {
-                    beanDeclare.fillParams(statement, params);
-                    int result = statement.executeUpdate();
-                    if (generatedKey != null) {
-                        ResultSet generatedKeys = statement.getGeneratedKeys();
-                        generatedKeys.next();
-                        generatedKey.setKey(generatedKeys.getObject(1));
-                    }
-                    return result;
-                }
-            }
-        } catch (SQLException e) {
-            throw new RuntimeException("操作数据库出错", e);
-        }
+        return runAndReturnRows(sql, params, generatedKey);
     }
 
     public T read() {
@@ -370,21 +369,67 @@ public class ExecuteBuilder<T> {
             logger.debug("执行sql:" + sql);
         }
 
+        Connection connection = null;
         try {
-            try (Connection connection = dataSource.getConnection()) {
-                try (PreparedStatement statement = connection.prepareStatement(sql)) {
-                    beanDeclare.fillParams(statement, params);
-                    try (ResultSet resultSet = statement.executeQuery()) {
-                        if (returnOne) {
-                            return Collections.singletonList(ResultSetHelper.read(resultSet, returnClazz));
-                        } else {
-                            return ResultSetHelper.readList(resultSet, returnClazz);
-                        }
+            connection = transaction != null ? transaction.getConnection() : dataSource.getConnection();
+            try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                beanDeclare.fillParams(statement, params);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    if (returnOne) {
+                        return Collections.singletonList(ResultSetHelper.read(resultSet, returnClazz));
+                    } else {
+                        return ResultSetHelper.readList(resultSet, returnClazz);
                     }
                 }
             }
         } catch (SQLException e) {
+            if (transaction != null && transaction.isAutoRollback()) {
+                transaction.rollback();
+                throw new WeekTransactionException("操作数据库出错", e);
+            }
             throw new RuntimeException("操作数据库出错", e);
+        } finally {
+            if (connection != null && transaction == null) {
+                tryCloseConnection(connection);
+            }
+        }
+    }
+
+    private int runAndReturnRows(String sql, List<Pair<Field, Object>> params, WeekGeneratedKey generatedKey) {
+        Connection connection = null;
+        try {
+            connection = transaction != null ? transaction.getConnection() : dataSource.getConnection();
+            int returnGeneratedKeys = generatedKey != null ? PreparedStatement.RETURN_GENERATED_KEYS : PreparedStatement.NO_GENERATED_KEYS;
+            try (PreparedStatement statement = connection.prepareStatement(sql, returnGeneratedKeys)) {
+                beanDeclare.fillParams(statement, params);
+                int result = statement.executeUpdate();
+                if (generatedKey != null) {
+                    ResultSet generatedKeys = statement.getGeneratedKeys();
+                    generatedKeys.next();
+                    generatedKey.setKey(generatedKeys.getObject(1));
+                }
+                return result;
+            }
+        } catch (SQLException e) {
+            if (transaction != null && transaction.isAutoRollback()) {
+                transaction.rollback();
+                throw new WeekTransactionException("操作数据库出错", e);
+            }
+            throw new RuntimeException("操作数据库出错", e);
+        } finally {
+            if (connection != null && transaction == null) {
+                tryCloseConnection(connection);
+            }
+        }
+    }
+
+    private void tryCloseConnection(Connection connection) {
+        try {
+            connection.close();
+        } catch (SQLException e) {
+            if (logger.isErrorEnabled()) {
+                logger.error("关闭数据库链接发生异常", e);
+            }
         }
     }
 }
