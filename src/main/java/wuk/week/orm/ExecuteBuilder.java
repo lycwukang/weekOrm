@@ -27,11 +27,13 @@ public class ExecuteBuilder<T> {
     // ======= where条件，只在select/update/delete时使用
     private Where where = new WhereEmpty();
     // ======= select返回值，只在select时使用
-    private List<Field> selects = new ArrayList<>();
+    private List<Column> selects = new ArrayList<>();
     // ======= group by条件，只在select时使用
     private List<Field> groupBys = new ArrayList<>();
     // ======= order by条件，只在select时使用
     private List<Pair<Field, OrderType>> orderBys = new ArrayList<>();
+    // ======= having条件，只在select时使用
+    private HavingEmpty having = new HavingEmpty();
     // ======= 更新数据
     private List<Pair<Field, Object>> setFields = new ArrayList<>();
     // ======= limit #{start}, #{size}，只在select时使用
@@ -55,7 +57,15 @@ public class ExecuteBuilder<T> {
 
     public ExecuteBuilder<T> select(Field... fields) {
         type = ExecuteType.select;
-        Collections.addAll(selects, fields);
+        for (Field field : fields) {
+            selects.add(ColumnHelper.field(field));
+        }
+        return this;
+    }
+
+    public ExecuteBuilder<T> select(Column... columns) {
+        type = ExecuteType.select;
+        Collections.addAll(selects, columns);
         return this;
     }
 
@@ -86,15 +96,6 @@ public class ExecuteBuilder<T> {
 
     public ExecuteBuilder<T> set(Field field, Object value) {
         this.setFields.add(new Pair<>(field, value));
-        return this;
-    }
-
-    private ExecuteBuilder<T> add(Where w) {
-        if (joinType.equals(JoinType.and)) {
-            where.and(w);
-        } else {
-            where.or(w);
-        }
         return this;
     }
 
@@ -140,8 +141,47 @@ public class ExecuteBuilder<T> {
         return add(WhereHelper.notIn(field, values));
     }
 
+    public ExecuteBuilder<T> like(Field field, String value) {
+        return add(WhereHelper.like(field, value));
+    }
+
     public ExecuteBuilder<T> groupBy(Field... fields) {
         Collections.addAll(groupBys, fields);
+        return this;
+    }
+
+    public ExecuteBuilder<T> having(Column column, OperatorType operatorType, Object value) {
+        addHaving(new HavingImpl(column, operatorType, value));
+        return this;
+    }
+
+    public ExecuteBuilder<T> havingEq(MethodType methodType, Field field, Object value) {
+        addHaving(HavingHelper.eq(field, methodType, value));
+        return this;
+    }
+
+    public ExecuteBuilder<T> havingNotEq(MethodType methodType, Field field, Object value) {
+        addHaving(HavingHelper.notEq(field, methodType, value));
+        return this;
+    }
+
+    public ExecuteBuilder<T> havingLt(MethodType methodType, Field field, Object value) {
+        addHaving(HavingHelper.lt(field, methodType, value));
+        return this;
+    }
+
+    public ExecuteBuilder<T> havingLtEq(MethodType methodType, Field field, Object value) {
+        addHaving(HavingHelper.ltEq(field, methodType, value));
+        return this;
+    }
+
+    public ExecuteBuilder<T> havingGt(MethodType methodType, Field field, Object value) {
+        addHaving(HavingHelper.gt(field, methodType, value));
+        return this;
+    }
+
+    public ExecuteBuilder<T> havingGtEq(MethodType methodType, Field field, Object value) {
+        addHaving(HavingHelper.gtEq(field, methodType, value));
         return this;
     }
 
@@ -158,6 +198,24 @@ public class ExecuteBuilder<T> {
     public ExecuteBuilder<T> limit(int start, int size) {
         this.limitStart = start;
         this.limitSize = size;
+        return this;
+    }
+
+    private ExecuteBuilder<T> add(Where w) {
+        if (joinType.equals(JoinType.and)) {
+            where.and(w);
+        } else {
+            where.or(w);
+        }
+        return this;
+    }
+
+    private ExecuteBuilder<T> addHaving(Where w) {
+        if (joinType.equals(JoinType.and)) {
+            having.and(w);
+        } else {
+            having.or(w);
+        }
         return this;
     }
 
@@ -319,17 +377,24 @@ public class ExecuteBuilder<T> {
     }
 
     private <F> List<F> readList(Class<F> returnClazz, boolean returnOne) {
-        StringBuilder builder = new StringBuilder("select ");
+        StringBuilder builder = new StringBuilder();
 
-        List<Field> fields = beanDeclare.getFields();
+        builder.append("select ");
         if (selects.size() > 0) {
-            fields = selects;
-        }
-        for (int i = 0; i < fields.size(); i++) {
-            if (i > 0) {
-                builder.append(", ");
+            for (int i = 0; i < selects.size(); i++) {
+                if (i > 0) {
+                    builder.append(", ");
+                }
+                ColumnHelper.builder(builder, beanDeclare, selects.get(i));
             }
-            builder.append("`").append(beanDeclare.getColumnName(fields.get(i))).append("`");
+        } else {
+            List<Field> fields = beanDeclare.getFields();
+            for (int i = 0; i < fields.size(); i++) {
+                if (i > 0) {
+                    builder.append(", ");
+                }
+                builder.append("`").append(beanDeclare.getColumnName(fields.get(i))).append("`");
+            }
         }
         builder.append(" from ").append("`").append(beanDeclare.getTableName()).append("`");
 
@@ -346,6 +411,9 @@ public class ExecuteBuilder<T> {
             }
         }
 
+        having.builder(builder);
+        params.addAll(having.builderObj());
+
         if (orderBys.size() > 0) {
             builder.append(" order by ");
             for (int i = 0; i < orderBys.size(); i++) {
@@ -357,7 +425,7 @@ public class ExecuteBuilder<T> {
             }
         }
 
-        if (limitStart > 0) {
+        if (limitStart > 0 || limitSize > 0) {
             builder.append(" limit ").append(limitStart);
             if (limitSize > 0) {
                 builder.append(", ").append(limitSize);
@@ -375,7 +443,7 @@ public class ExecuteBuilder<T> {
                 connection = transaction.getConnection();
             } else {
                 connection = dataSource.getConnection();
-                connection.setAutoCommit(false);
+                connection.setAutoCommit(true);
             }
             try (PreparedStatement statement = connection.prepareStatement(sql)) {
                 beanDeclare.fillParams(statement, params);
@@ -403,7 +471,7 @@ public class ExecuteBuilder<T> {
                 connection = transaction.getConnection();
             } else {
                 connection = dataSource.getConnection();
-                connection.setAutoCommit(false);
+                connection.setAutoCommit(true);
             }
             int returnGeneratedKeys = generatedKey != null ? PreparedStatement.RETURN_GENERATED_KEYS : PreparedStatement.NO_GENERATED_KEYS;
             try (PreparedStatement statement = connection.prepareStatement(sql, returnGeneratedKeys)) {

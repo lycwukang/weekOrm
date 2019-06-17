@@ -9,7 +9,8 @@ public enum OperatorType {
     gt,
     gtEq,
     in,
-    notIn;
+    notIn,
+    like;
 
     OperatorType() {
     }
@@ -32,6 +33,8 @@ public enum OperatorType {
                 return "in";
             case notIn:
                 return "not in";
+            case like:
+                return "like";
         }
         return "";
     }

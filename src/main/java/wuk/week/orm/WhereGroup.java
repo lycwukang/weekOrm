@@ -1,6 +1,7 @@
 package wuk.week.orm;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.List;
 
 public class WhereGroup implements Where {
@@ -18,16 +19,24 @@ public class WhereGroup implements Where {
 
     @Override
     public List<Pair<Field, Object>> builderObj() {
-        return this.where.builderObj();
+        return where.builderObj();
     }
 
     @Override
     public Where and(Where where) {
-        return this.where.and(where);
+        if (this.where == null) {
+            return this.where = where;
+        } else {
+            return this.where.and(where);
+        }
     }
 
     @Override
     public Where or(Where where) {
-        return this.where.or(where);
+        if (this.where == null) {
+            return this.where = where;
+        } else {
+            return this.where.or(where);
+        }
     }
 }

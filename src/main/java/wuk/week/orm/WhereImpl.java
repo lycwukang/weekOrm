@@ -34,6 +34,8 @@ public class WhereImpl implements Where {
                 builder.append("?");
             }
             builder.append(")");
+        } else if (operatorType.equals(OperatorType.like)) {
+            builder.append("concat('%', ?, '%')");
         } else {
             builder.append("?");
         }
@@ -50,18 +52,29 @@ public class WhereImpl implements Where {
         for (Object value : values) {
             list.add(new Pair<>(field, value));
         }
+        if (joinWhere != null) {
+            list.addAll(joinWhere.builderObj());
+        }
         return list;
     }
 
     @Override
     public Where and(Where where) {
-        joinType = JoinType.and;
-        return joinWhere = where;
+        if (joinWhere != null) {
+            return joinWhere.and(where);
+        } else {
+            joinType = JoinType.and;
+            return joinWhere = where;
+        }
     }
 
     @Override
     public Where or(Where where) {
-        joinType = JoinType.or;
-        return joinWhere = where;
+        if (joinWhere != null) {
+            return joinWhere.and(where);
+        } else {
+            joinType = JoinType.or;
+            return joinWhere = where;
+        }
     }
 }

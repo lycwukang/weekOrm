@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -51,26 +52,32 @@ public class ResultSetHelper {
                 String columnName = metaData.getColumnName(i);
                 Field field = beanDeclare.getFieldByColumnName(columnName);
                 int index = set.findColumn(columnName);
-                Object value = null;
-                if (field.getType().equals(int.class) || field.getType().equals(Integer.class)) {
-                    value = set.getInt(index);
-                } else if (field.getType().equals(long.class) || field.getType().equals(Long.class)) {
-                    value = set.getLong(index);
-                } else if (field.getType().equals(float.class) || field.getType().equals(Float.class)) {
-                    value = set.getFloat(index);
-                } else if (field.getType().equals(double.class) || field.getType().equals(Double.class)) {
-                    value = set.getDouble(index);
-                } else if (field.getType().equals(String.class)) {
-                    value = set.getString(index);
-                } else if (field.getType().equals(Boolean.class)) {
-                    value = set.getString(index);
-                } else if (field.getType().equals(Date.class)) {
-                    value = set.getDate(index);
-                } else if (field.getType().equals(BigDecimal.class)) {
-                    value = set.getBigDecimal(index);
-                }
+                Object value = set.getObject(index);
+                if (value != null) {
+                    if (field.getType().equals(int.class) || field.getType().equals(Integer.class)) {
+                        value = set.getInt(index);
+                    } else if (field.getType().equals(long.class) || field.getType().equals(Long.class)) {
+                        value = set.getLong(index);
+                    } else if (field.getType().equals(float.class) || field.getType().equals(Float.class)) {
+                        value = set.getFloat(index);
+                    } else if (field.getType().equals(double.class) || field.getType().equals(Double.class)) {
+                        value = set.getDouble(index);
+                    } else if (field.getType().equals(String.class)) {
+                        value = set.getString(index);
+                    } else if (field.getType().equals(Boolean.class)) {
+                        value = set.getBoolean(index);
+                    } else if (field.getType().equals(Date.class)) {
+                        if (value.getClass().equals(Timestamp.class)) {
+                            value = new Date(set.getTimestamp(index).getTime());
+                        } else {
+                            value = set.getDate(index);
+                        }
+                    } else if (field.getType().equals(BigDecimal.class)) {
+                        value = set.getBigDecimal(index);
+                    }
 
-                beanDeclare.setFieldValue(field, data, value);
+                    beanDeclare.setFieldValue(field, data, value);
+                }
             }
             return data;
         }

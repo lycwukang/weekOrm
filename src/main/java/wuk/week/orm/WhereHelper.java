@@ -51,6 +51,10 @@ public class WhereHelper {
         return new WhereImpl(field, OperatorType.notIn, values);
     }
 
+    public static Where like(Field field, String value) {
+        return new WhereImpl(field, OperatorType.like, Collections.singletonList(value));
+    }
+
     public static Where group(Where where) {
         return new WhereGroup(where);
     }
