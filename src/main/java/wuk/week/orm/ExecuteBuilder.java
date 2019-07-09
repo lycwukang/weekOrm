@@ -7,6 +7,7 @@ import javax.sql.DataSource;
 import java.lang.reflect.Field;
 import java.sql.*;
 import java.util.*;
+import java.util.Date;
 
 public class ExecuteBuilder<T> {
 
@@ -24,6 +25,8 @@ public class ExecuteBuilder<T> {
     private ExecuteType type = null;
     // ======= on duplicate key update，只在insert时使用
     private boolean onDuplicateKeyUpdate = false;
+    // ======= for update，只在select时使用
+    private boolean forUpdate = false;
     // ======= where条件，只在select/update/delete时使用
     private Where where = new WhereEmpty();
     // ======= select返回值，只在select时使用
@@ -50,11 +53,40 @@ public class ExecuteBuilder<T> {
         this.beanDeclare = BeanDeclare.findDeclare(clazz);
     }
 
+    /**
+     * select *
+     * @return
+     */
     public ExecuteBuilder<T> select() {
         type = ExecuteType.select;
         return this;
     }
 
+    /**
+     * select count(1)
+     * 快捷方法
+     * @return
+     */
+    public ExecuteBuilder<T> selectCount() {
+        type = ExecuteType.select;
+        selects.add(ColumnHelper.count());
+        return this;
+    }
+
+    /**
+     * select * from table for update
+     * @return
+     */
+    public ExecuteBuilder<T> forUpdate() {
+        this.forUpdate = true;
+        return this;
+    }
+
+    /**
+     * select fields
+     * @param fields
+     * @return
+     */
     public ExecuteBuilder<T> select(Field... fields) {
         type = ExecuteType.select;
         for (Field field : fields) {
@@ -63,37 +95,68 @@ public class ExecuteBuilder<T> {
         return this;
     }
 
+    /**
+     * select columns
+     * @param columns
+     * @return
+     */
     public ExecuteBuilder<T> select(Column... columns) {
         type = ExecuteType.select;
         Collections.addAll(selects, columns);
         return this;
     }
 
+    /**
+     * insert
+     * @return
+     */
     public ExecuteBuilder<T> insert() {
         type = ExecuteType.insert;
         return this;
     }
 
+    /**
+     * insert table() values() on duplicate key update
+     * @return
+     */
     public ExecuteBuilder<T> onDuplicateKeyUpdate() {
         onDuplicateKeyUpdate = true;
         return this;
     }
 
+    /**
+     * update
+     * @return
+     */
     public ExecuteBuilder<T> update() {
         type = ExecuteType.update;
         return this;
     }
 
+    /**
+     * delete
+     * @return
+     */
     public ExecuteBuilder<T> delete() {
         type = ExecuteType.delete;
         return this;
     }
 
+    /**
+     * where
+     * @return
+     */
     public ExecuteBuilder<T> where() {
         where = new WhereEmpty();
         return this;
     }
 
+    /**
+     * set
+     * @param field
+     * @param value
+     * @return
+     */
     public ExecuteBuilder<T> set(Field field, Object value) {
         this.setFields.add(new Pair<>(field, value));
         return this;
@@ -133,12 +196,64 @@ public class ExecuteBuilder<T> {
         return add(WhereHelper.gtEq(field, value));
     }
 
+    /**
+     * in values...
+     * @param field
+     * @param values
+     * @return
+     */
     public ExecuteBuilder<T> in(Field field, Object... values) {
-        return add(WhereHelper.in(field, values));
+        return inArray(field, values);
     }
 
+    /**
+     * in values...
+     * @param field
+     * @param values
+     * @return
+     */
+    public ExecuteBuilder<T> inArray(Field field, Object... values) {
+        return add(WhereHelper.inArray(field, values));
+    }
+
+    /**
+     * in List(value)
+     * @param field
+     * @param values
+     * @return
+     */
+    public ExecuteBuilder<T> inList(Field field, List<?> values) {
+        return add(WhereHelper.inList(field, values));
+    }
+
+    /**
+     * not in values...
+     * @param field
+     * @param values
+     * @return
+     */
     public ExecuteBuilder<T> notIn(Field field, Object... values) {
-        return add(WhereHelper.notIn(field, values));
+        return notInArray(field, values);
+    }
+
+    /**
+     * not in values...
+     * @param field
+     * @param values
+     * @return
+     */
+    public ExecuteBuilder<T> notInArray(Field field, Object... values) {
+        return add(WhereHelper.notInArray(field, values));
+    }
+
+    /**
+     * not in List(value)
+     * @param field
+     * @param values
+     * @return
+     */
+    public ExecuteBuilder<T> notInList(Field field, List<?> values) {
+        return add(WhereHelper.notInList(field, values));
     }
 
     public ExecuteBuilder<T> like(Field field, String value) {
@@ -430,6 +545,10 @@ public class ExecuteBuilder<T> {
             if (limitSize > 0) {
                 builder.append(", ").append(limitSize);
             }
+        }
+
+        if (forUpdate) {
+            builder.append(" for update");
         }
 
         String sql = builder.toString();

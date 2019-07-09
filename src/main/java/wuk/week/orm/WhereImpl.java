@@ -8,12 +8,12 @@ public class WhereImpl implements Where {
 
     private BeanDeclare beanDeclare;
     private Field field;
-    private List<Object> values;
+    private List<?> values;
     private OperatorType operatorType;
     private JoinType joinType;
     private Where joinWhere;
 
-    public WhereImpl(Field field, OperatorType operatorType, List<Object> values) {
+    public WhereImpl(Field field, OperatorType operatorType, List<?> values) {
         this.beanDeclare = BeanDeclare.findDeclare(field.getDeclaringClass());
         this.field = field;
         this.operatorType = operatorType;

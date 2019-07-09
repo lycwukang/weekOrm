@@ -31,23 +31,23 @@ public class WhereHelper {
         return new WhereImpl(field, OperatorType.gtEq, Collections.singletonList(value));
     }
 
-    public static Where in(Field field, Object... values) {
+    public static Where inArray(Field field, Object... values) {
         List<Object> objects = new ArrayList<>();
         Collections.addAll(objects, values);
-        return in(field, objects);
+        return inList(field, objects);
     }
 
-    public static Where in(Field field, List<Object> values) {
+    public static Where inList(Field field, List<?> values) {
         return new WhereImpl(field, OperatorType.in, values);
     }
 
-    public static Where notIn(Field field, Object[] values) {
+    public static Where notInArray(Field field, Object[] values) {
         List<Object> objects = new ArrayList<>();
         Collections.addAll(objects, values);
-        return notIn(field, objects);
+        return notInList(field, objects);
     }
 
-    public static Where notIn(Field field, List<Object> values) {
+    public static Where notInList(Field field, List<?> values) {
         return new WhereImpl(field, OperatorType.notIn, values);
     }
 

@@ -356,7 +356,7 @@ public class BeanDeclare<T> {
                 if (obj == null) {
                     statement.setNull(i, Types.DATE);
                 } else {
-                    statement.setDate(i, new java.sql.Date(((Date) obj).getTime()));
+                    statement.setTimestamp(i, new Timestamp(((Date) obj).getTime()));
                 }
             } else if (field.getType().equals(BigDecimal.class)) {
                 if (obj == null) {

@@ -4,8 +4,6 @@ import java.lang.reflect.Field;
 
 public class Column {
 
-    public static final Column COUNT_FIELD = new Column(null, MethodType.count);
-
     private Field field;
     private MethodType method;
 

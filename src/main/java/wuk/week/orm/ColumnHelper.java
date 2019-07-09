@@ -4,8 +4,10 @@ import java.lang.reflect.Field;
 
 public class ColumnHelper {
 
+    private static final Column COUNT_FIELD = new Column(null, MethodType.count);
+
     public static Column count() {
-        return Column.COUNT_FIELD;
+        return COUNT_FIELD;
     }
 
     public static Column field(Field field) {
