@@ -172,28 +172,38 @@ public class ExecuteBuilder<T> {
         return this;
     }
 
+    public ExecuteBuilder<T> and(Where where) {
+        this.where.and(where);
+        return this;
+    }
+
+    public ExecuteBuilder<T> or(Where where) {
+        this.where.or(where);
+        return this;
+    }
+
     public ExecuteBuilder<T> eq(Field field, Object value) {
-        return add(WhereHelper.eq(field, value));
+        return append(WhereHelper.eq(field, value));
     }
 
     public ExecuteBuilder<T> notEq(Field field, Object value) {
-        return add(WhereHelper.notEq(field, value));
+        return append(WhereHelper.notEq(field, value));
     }
 
     public ExecuteBuilder<T> lt(Field field, Object value) {
-        return add(WhereHelper.lt(field, value));
+        return append(WhereHelper.lt(field, value));
     }
 
     public ExecuteBuilder<T> ltEq(Field field, Object value) {
-        return add(WhereHelper.ltEq(field, value));
+        return append(WhereHelper.ltEq(field, value));
     }
 
     public ExecuteBuilder<T> gt(Field field, Object value) {
-        return add(WhereHelper.gt(field, value));
+        return append(WhereHelper.gt(field, value));
     }
 
     public ExecuteBuilder<T> gtEq(Field field, Object value) {
-        return add(WhereHelper.gtEq(field, value));
+        return append(WhereHelper.gtEq(field, value));
     }
 
     /**
@@ -213,7 +223,7 @@ public class ExecuteBuilder<T> {
      * @return
      */
     public ExecuteBuilder<T> inArray(Field field, Object... values) {
-        return add(WhereHelper.inArray(field, values));
+        return append(WhereHelper.inArray(field, values));
     }
 
     /**
@@ -223,7 +233,7 @@ public class ExecuteBuilder<T> {
      * @return
      */
     public ExecuteBuilder<T> inList(Field field, List<?> values) {
-        return add(WhereHelper.inList(field, values));
+        return append(WhereHelper.inList(field, values));
     }
 
     /**
@@ -243,7 +253,7 @@ public class ExecuteBuilder<T> {
      * @return
      */
     public ExecuteBuilder<T> notInArray(Field field, Object... values) {
-        return add(WhereHelper.notInArray(field, values));
+        return append(WhereHelper.notInArray(field, values));
     }
 
     /**
@@ -253,11 +263,11 @@ public class ExecuteBuilder<T> {
      * @return
      */
     public ExecuteBuilder<T> notInList(Field field, List<?> values) {
-        return add(WhereHelper.notInList(field, values));
+        return append(WhereHelper.notInList(field, values));
     }
 
     public ExecuteBuilder<T> like(Field field, String value) {
-        return add(WhereHelper.like(field, value));
+        return append(WhereHelper.like(field, value));
     }
 
     public ExecuteBuilder<T> groupBy(Field... fields) {
@@ -316,7 +326,7 @@ public class ExecuteBuilder<T> {
         return this;
     }
 
-    private ExecuteBuilder<T> add(Where w) {
+    private ExecuteBuilder<T> append(Where w) {
         if (joinType.equals(JoinType.and)) {
             where.and(w);
         } else {
