@@ -14,7 +14,9 @@ public class WhereGroup implements Where {
 
     @Override
     public void builder(StringBuilder builder) {
+        builder.append("(");
         this.where.builder(builder);
+        builder.append(")");
     }
 
     @Override
