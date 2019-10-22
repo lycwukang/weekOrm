@@ -8,8 +8,18 @@ import java.util.List;
 
 public class WeekManager {
 
-    // 当前所有的数据源
+    /**
+     * 当前所有的数据源
+     */
     private List<WeekSource> dataSources = new ArrayList<>();
+
+    public <T> ExecuteBuilder<T> build(Class<T> clazz) {
+        return build(dataSources.get(0).getName(), null, clazz);
+    }
+
+    public <T> ExecuteBuilder<T> build(WeekTransaction transaction, Class<T> clazz) {
+        return build(dataSources.get(0).getName(), transaction, clazz);
+    }
 
     public <T> ExecuteBuilder<T> build(String name, Class<T> clazz) {
         return build(name, null, clazz);
@@ -26,6 +36,14 @@ public class WeekManager {
         }
 
         return new ExecuteBuilder<>(dataSource, transaction, clazz);
+    }
+
+    public WeekTransaction begin() {
+        return begin(dataSources.get(0).getName());
+    }
+
+    public WeekTransaction begin(int transactionIsolation) {
+        return begin(dataSources.get(0).getName(), transactionIsolation);
     }
 
     public WeekTransaction begin(String name) {
