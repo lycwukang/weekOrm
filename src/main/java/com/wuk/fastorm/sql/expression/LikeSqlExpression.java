@@ -1,0 +1,31 @@
+package com.wuk.fastorm.sql.expression;
+
+import com.wuk.fastorm.sql.SqlField;
+import com.wuk.fastorm.sql.SqlParam;
+import com.wuk.fastorm.sql.SqlUtils;
+
+import java.util.List;
+
+/**
+ * x like y
+ */
+public class LikeSqlExpression extends AbstractSqlExpression {
+
+    private SqlField x;
+    private SqlField y;
+
+    public LikeSqlExpression(SqlField x, SqlField y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    @Override
+    public String getSql() {
+        return String.format("%s LIKE %s", x.getSql(), y.getSql());
+    }
+
+    @Override
+    public List<SqlParam> getParams() {
+        return SqlUtils.getParams(x, y);
+    }
+}
