@@ -52,7 +52,7 @@ public abstract class AbstractSqlSessionExecutor {
         Sql sql = sqlCreater.createSql();
 
         if (getLogger().isDebugEnabled()) {
-            getLogger().debug(String.format("sql_text=%s", sql.getSql()));
+            getLogger().debug(String.format("sql: %s", sql.getSql()));
         }
 
         try (AutoCloseableExecutor executor = new AutoCloseableExecutor(connection, sql)) {

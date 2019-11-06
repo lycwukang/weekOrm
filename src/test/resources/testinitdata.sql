@@ -17,4 +17,4 @@ insert into test_member(create_date, modify_date, username, phone, amount, age, 
 value('2019-11-12 12:42:00', '2019-11-12 12:42:00', 'test_member_06', 'test_phone_06', 199.99, 32, 27.5, 10.5, false);
 
 insert into test_member(create_date, modify_date, username, phone, amount, age, height, weight, enable)
-value('2019-11-13 12:32:00', '2019-11-13 12:32:00', 'test_member_07', 'test_phone_07', 19.99, 29, 37.5, 240.5, true);
+value('2019-11-13 12:32:00', '2019-11-13 12:32:00', 'test_member_17', 'test_phone_17', 19.99, 29, 37.5, 240.5, true);

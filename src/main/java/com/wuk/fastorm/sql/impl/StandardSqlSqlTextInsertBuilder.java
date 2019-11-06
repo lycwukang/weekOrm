@@ -23,7 +23,7 @@ public class StandardSqlSqlTextInsertBuilder implements StandardSqlSqlTextBuilde
             throw new FastormSqlException("构建sql出错，未设置insertDataList");
         }
 
-        StringBuilder builder = new StringBuilder("INSERT INTO ");
+        StringBuilder builder = new StringBuilder(String.format("%s INTO ", sql.getType()));
 
         if (sql.getSchema() != null && sql.getSchema().length() > 0) {
             builder.append(String.format("`%s`.", sql.getSchema()));

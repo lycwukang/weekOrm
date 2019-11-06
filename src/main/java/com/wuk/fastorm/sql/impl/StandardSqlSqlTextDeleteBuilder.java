@@ -19,7 +19,7 @@ public class StandardSqlSqlTextDeleteBuilder implements StandardSqlSqlTextBuilde
             throw new FastormSqlException("构建sql出错，未设置whereList");
         }
 
-        StringBuilder builder = new StringBuilder("DELETE FROM ");
+        StringBuilder builder = new StringBuilder(String.format("%s FROM ", sql.getType().getSql()));
 
         if (sql.getSchema() != null && sql.getSchema().length() > 0) {
             builder.append(String.format("`%s`.", sql.getSchema()));

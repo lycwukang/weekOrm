@@ -22,7 +22,7 @@ public class JoinSqlExpression extends AbstractSqlExpression {
         if (joinType.equals(SqlJoinType.EMPTY)) {
             return expression.getSql();
         } else {
-            return String.format("%s %s", joinType, expression.getSql());
+            return String.format("%s %s", joinType.getSql(), expression.getSql());
         }
     }
 

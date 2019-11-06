@@ -4,13 +4,13 @@ import java.util.function.Function;
 
 public class FastormGeneratedKey<T> {
 
-    private Function<T, Object> function;
+    private Function<T, ?> function;
 
-    public FastormGeneratedKey(Function<T, Object> function) {
+    public FastormGeneratedKey(Function<T, ?> function) {
         this.function = function;
     }
 
-    public Function<T, Object> getFunction() {
+    public Function<T, ?> getFunction() {
         return function;
     }
 }

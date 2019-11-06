@@ -6,4 +6,7 @@ import java.util.ArrayList;
 
 public class SqlOrderCollection extends ArrayList<SqlOrder> {
 
+    public SqlOrderCollection(int size) {
+        super(size);
+    }
 }

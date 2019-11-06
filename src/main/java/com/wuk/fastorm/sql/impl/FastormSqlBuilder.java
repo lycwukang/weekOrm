@@ -2,6 +2,7 @@ package com.wuk.fastorm.sql.impl;
 
 import com.wuk.fastorm.annontation.FastormColumn;
 import com.wuk.fastorm.bean.FastormBeanStructure;
+import com.wuk.fastorm.exception.FastormException;
 import com.wuk.fastorm.exception.FastormSqlException;
 import com.wuk.fastorm.sql.*;
 import com.wuk.fastorm.sql.expression.*;
@@ -14,13 +15,10 @@ import com.wuk.fastorm.sql.collection.*;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 /**
  * 创建sql的建造类
@@ -54,6 +52,11 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
     protected Consumer<SqlExpression> joinSqlExpressionConsumer;
 
     /**
+     * 保存包含表达式的状态
+     */
+    protected Queue<FastormGroupJoinSqlExpression> groupJoinSqlExpressionQueue = new LinkedBlockingQueue<>();
+
+    /**
      * 执行器
      */
     protected FastormSqlExecutor<T> sqlExecutor;
@@ -63,12 +66,12 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> select() {
-        List<SqlField> sqlFields = new ArrayList<>();
+        SqlFieldCollection collection = new SqlFieldCollection(beanStructure.getFieldNames().size());
         for (String fieldName : beanStructure.getFieldNames()) {
             FastormColumn fastormColumn = beanStructure.getColumnMap().get(fieldName);
-            sqlFields.add(new NameSqlField(fastormColumn.value()));
+            collection.add(new NameSqlField(fastormColumn.value()));
         }
-        return select(new SqlFieldCollection(sqlFields));
+        return select(collection);
     }
 
     /**
@@ -77,8 +80,8 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> select(Function<T, ?> func) {
-        FuncCollection<T> collection = new FuncCollection<>();
-        collection.add(func);
+        FuncCollection<T> collection = new FuncCollection<>(1);
+        Collections.addAll(collection, func);
 
         return select(collection);
     }
@@ -89,9 +92,9 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> select(FuncCollection<T> collection) {
-        SqlFieldCollection fieldCollection = new SqlFieldCollection();
+        SqlFieldCollection fieldCollection = new SqlFieldCollection(collection.size());
         for (Function<T, ?> function : collection) {
-            String fieldName = beanStructure.findFieldName(function);
+            String fieldName = beanStructure.findColumnName(function);
             fieldCollection.add(new NameSqlField(fieldName));
         }
 
@@ -104,7 +107,9 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> select(SqlField field) {
-        return select(new SqlFieldCollection(field));
+        SqlFieldCollection collection = new SqlFieldCollection(1);
+        Collections.addAll(collection, field);
+        return select(collection);
     }
 
     /**
@@ -211,29 +216,99 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
     }
 
     /**
-     * set column = value
+     * set #{func} = #{val}
      * @param func
-     * @param supplier
-     * @param <F>
+     * @param val
      * @return
      */
-    public <F> FastormSqlBuilder<T> set(Function<T, F> func, Supplier<F> supplier) {
-        set(func, supplier.get());
+    public FastormSqlBuilder<T> set(Function<T, Integer> func, Integer val) {
+        return set(func, (Object) val);
+    }
+
+    /**
+     * set #{func} = #{val}
+     * @param func
+     * @param val
+     * @return
+     */
+    public FastormSqlBuilder<T> set(Function<T, Long> func, Long val) {
+        return set(func, (Object) val);
+    }
+
+    /**
+     * set #{func} = #{val}
+     * @param func
+     * @param val
+     * @return
+     */
+    public FastormSqlBuilder<T> set(Function<T, Float> func, Float val) {
+        return set(func, (Object) val);
+    }
+
+    /**
+     * set #{func} = #{val}
+     * @param func
+     * @param val
+     * @return
+     */
+    public FastormSqlBuilder<T> set(Function<T, Double> func, Double val) {
+        return set(func, (Object) val);
+    }
+
+    /**
+     * set #{func} = #{val}
+     * @param func
+     * @param val
+     * @return
+     */
+    public FastormSqlBuilder<T> set(Function<T, Boolean> func, Boolean val) {
+        return set(func, (Object) val);
+    }
+
+    /**
+     * set #{func} = #{val}
+     * @param func
+     * @param val
+     * @return
+     */
+    public FastormSqlBuilder<T> set(Function<T, String> func, String val) {
+        return set(func, (Object) val);
+    }
+
+    /**
+     * set #{func} = #{val}
+     * @param func
+     * @param val
+     * @return
+     */
+    public FastormSqlBuilder<T> set(Function<T, Date> func, Date val) {
+        return set(func, (Object) val);
+    }
+
+    /**
+     * set #{func} = #{val}
+     * @param func
+     * @param val
+     * @return
+     */
+    private FastormSqlBuilder<T> set(Function<T, ?> func, Object val) {
+        String fieldName = findAndCheckColumnName(func, Collections.singletonList(val));
+        Class<?> clazz = beanStructure.getReadMethodMap().get(fieldName).getReturnType();
+        SqlField field = new VariableSqlField(clazz, val);
+        sql.addSet(new StandardSqlSqlSet(fieldName, field));
 
         return this;
     }
 
     /**
-     * set column = value
+     * set #{func} = #{val}
      * @param func
-     * @param obj
-     * @param <F>
+     * @param val
      * @return
      */
-    public <F> FastormSqlBuilder<T> set(Function<T, F> func, Object obj) {
-        String fieldName = findAndCheckFieldName(func, Collections.singletonList(obj));
-        Class<?> clazz = beanStructure.getReadMethodMap().get(fieldName).getReturnType();
-        sql.addSet(new StandardSqlSqlSet(fieldName, new VariableSqlField(clazz, obj)));
+    public FastormSqlBuilder<T> set(Function<T, ?> func, SqlField val) {
+        String fieldName = beanStructure.findColumnName(func);
+        sql.addSet(new StandardSqlSqlSet(fieldName, val));
 
         return this;
     }
@@ -251,12 +326,52 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
 
     /**
      * having
-     * @param expression
      * @return
      */
-    public FastormSqlBuilder<T> having(SqlExpression expression) {
+    public FastormSqlBuilder<T> having() {
         joinType = SqlJoinType.EMPTY;
         joinSqlExpressionConsumer = sql::addHaving;
+
+        return this;
+    }
+
+    /**
+     * 左括号
+     * @return
+     */
+    public FastormSqlBuilder<T> left() {
+        GroupJoinSqlExpression expressions = new GroupJoinSqlExpression();
+        expressions.setJoinType(joinType);
+
+        FastormGroupJoinSqlExpression joinSqlExpression = new FastormGroupJoinSqlExpression();
+        joinSqlExpression.setConsumer(joinSqlExpressionConsumer);
+        joinSqlExpression.setExpressions(expressions);
+
+        groupJoinSqlExpressionQueue.offer(joinSqlExpression);
+        joinSqlExpressionConsumer = expressions::add;
+        joinType = SqlJoinType.EMPTY;
+
+        return this;
+    }
+
+    /**
+     * 右括号
+     * @return
+     */
+    public FastormSqlBuilder<T> right() {
+        FastormGroupJoinSqlExpression joinSqlExpression = groupJoinSqlExpressionQueue.poll();
+        if (joinSqlExpression == null) {
+            throw new FastormException("找不到对应的左括号，请检查代码调用顺序");
+        }
+
+        joinSqlExpression.join();
+
+        FastormGroupJoinSqlExpression joinSqlExpressionParent = groupJoinSqlExpressionQueue.peek();
+        if (joinSqlExpressionParent != null) {
+            joinSqlExpressionConsumer = joinSqlExpressionParent.getExpressions()::add;
+        } else {
+            joinSqlExpressionConsumer = joinSqlExpression.getConsumer();
+        }
 
         return this;
     }
@@ -287,27 +402,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param val
      * @return
      */
-    public FastormSqlBuilder<T> eq(Function<T, Integer> func, int val) {
-        return eq(func, (Object) val);
-    }
-
-    /**
-     * where #{func} = #{val}
-     * @param func
-     * @param val
-     * @return
-     */
     public FastormSqlBuilder<T> eq(Function<T, Integer> func, Integer val) {
-        return eq(func, (Object) val);
-    }
-
-    /**
-     * where #{func} = #{val}
-     * @param func
-     * @param val
-     * @return
-     */
-    public FastormSqlBuilder<T> eq(Function<T, Long> func, long val) {
         return eq(func, (Object) val);
     }
 
@@ -327,16 +422,6 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param val
      * @return
      */
-    public FastormSqlBuilder<T> eq(Function<T, Float> func, float val) {
-        return eq(func, (Object) val);
-    }
-
-    /**
-     * where #{func} = #{val}
-     * @param func
-     * @param val
-     * @return
-     */
     public FastormSqlBuilder<T> eq(Function<T, Float> func, Float val) {
         return eq(func, (Object) val);
     }
@@ -347,27 +432,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param val
      * @return
      */
-    public FastormSqlBuilder<T> eq(Function<T, Double> func, double val) {
-        return eq(func, (Object) val);
-    }
-
-    /**
-     * where #{func} = #{val}
-     * @param func
-     * @param val
-     * @return
-     */
     public FastormSqlBuilder<T> eq(Function<T, Double> func, Double val) {
-        return eq(func, (Object) val);
-    }
-
-    /**
-     * where #{func} = #{val}
-     * @param func
-     * @param val
-     * @return
-     */
-    public FastormSqlBuilder<T> eq(Function<T, Boolean> func, boolean val) {
         return eq(func, (Object) val);
     }
 
@@ -418,7 +483,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     private FastormSqlBuilder<T> eq(Function<T, ?> func, Object val) {
-        String fieldName = findAndCheckFieldName(func, Collections.singletonList(val));
+        String fieldName = findAndCheckColumnName(func, Collections.singletonList(val));
         Class<?> clazz = beanStructure.getReadMethodMap().get(fieldName).getReturnType();
 
         return eq(new NameSqlField(fieldName), new VariableSqlField(clazz, val));
@@ -431,7 +496,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> eq(Function<T, ?> func, SqlField val) {
-        String fieldName = beanStructure.findFieldName(func);
+        String fieldName = beanStructure.findColumnName(func);
         SqlField field = new NameSqlField(fieldName);
 
         return eq(field, val);
@@ -457,27 +522,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param val
      * @return
      */
-    public FastormSqlBuilder<T> notEq(Function<T, Integer> func, int val) {
-        return notEq(func, (Object) val);
-    }
-
-    /**
-     * where #{func} != #{val}
-     * @param func
-     * @param val
-     * @return
-     */
     public FastormSqlBuilder<T> notEq(Function<T, Integer> func, Integer val) {
-        return notEq(func, (Object) val);
-    }
-
-    /**
-     * where #{func} != #{val}
-     * @param func
-     * @param val
-     * @return
-     */
-    public FastormSqlBuilder<T> notEq(Function<T, Long> func, long val) {
         return notEq(func, (Object) val);
     }
 
@@ -497,16 +542,6 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param val
      * @return
      */
-    public FastormSqlBuilder<T> notEq(Function<T, Float> func, float val) {
-        return notEq(func, (Object) val);
-    }
-
-    /**
-     * where #{func} != #{val}
-     * @param func
-     * @param val
-     * @return
-     */
     public FastormSqlBuilder<T> notEq(Function<T, Float> func, Float val) {
         return notEq(func, (Object) val);
     }
@@ -517,27 +552,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param val
      * @return
      */
-    public FastormSqlBuilder<T> notEq(Function<T, Double> func, double val) {
-        return notEq(func, (Object) val);
-    }
-
-    /**
-     * where #{func} != #{val}
-     * @param func
-     * @param val
-     * @return
-     */
     public FastormSqlBuilder<T> notEq(Function<T, Double> func, Double val) {
-        return notEq(func, (Object) val);
-    }
-
-    /**
-     * where #{func} != #{val}
-     * @param func
-     * @param val
-     * @return
-     */
-    public FastormSqlBuilder<T> notEq(Function<T, Boolean> func, boolean val) {
         return notEq(func, (Object) val);
     }
 
@@ -588,7 +603,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     private FastormSqlBuilder<T> notEq(Function<T, ?> func, Object val) {
-        String fieldName = findAndCheckFieldName(func, Collections.singletonList(val));
+        String fieldName = findAndCheckColumnName(func, Collections.singletonList(val));
         Class<?> clazz = beanStructure.getReadMethodMap().get(fieldName).getReturnType();
 
         return notEq(new NameSqlField(fieldName), new VariableSqlField(clazz, val));
@@ -602,7 +617,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public <F> FastormSqlBuilder<T> notEq(Function<T, F> func, SqlField val) {
-        String fieldName = beanStructure.findFieldName(func);
+        String fieldName = beanStructure.findColumnName(func);
         SqlField field = new NameSqlField(fieldName);
 
         return notEq(field, val);
@@ -628,7 +643,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param val
      * @return
      */
-    private FastormSqlBuilder<T> lt(Function<T, Integer> func, int val) {
+    public FastormSqlBuilder<T> lt(Function<T, Integer> func, Integer val) {
         return lt(func, (Object) val);
     }
 
@@ -638,7 +653,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param val
      * @return
      */
-    private FastormSqlBuilder<T> lt(Function<T, Integer> func, Integer val) {
+    public FastormSqlBuilder<T> lt(Function<T, Long> func, Long val) {
         return lt(func, (Object) val);
     }
 
@@ -648,7 +663,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param val
      * @return
      */
-    private FastormSqlBuilder<T> lt(Function<T, Long> func, long val) {
+    public FastormSqlBuilder<T> lt(Function<T, Float> func, Float val) {
         return lt(func, (Object) val);
     }
 
@@ -658,7 +673,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param val
      * @return
      */
-    private FastormSqlBuilder<T> lt(Function<T, Long> func, Long val) {
+    public FastormSqlBuilder<T> lt(Function<T, Double> func, Double val) {
         return lt(func, (Object) val);
     }
 
@@ -668,7 +683,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param val
      * @return
      */
-    private FastormSqlBuilder<T> lt(Function<T, Float> func, float val) {
+    public FastormSqlBuilder<T> lt(Function<T, Boolean> func, Boolean val) {
         return lt(func, (Object) val);
     }
 
@@ -678,7 +693,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param val
      * @return
      */
-    private FastormSqlBuilder<T> lt(Function<T, Float> func, Float val) {
+    public FastormSqlBuilder<T> lt(Function<T, BigDecimal> func, BigDecimal val) {
         return lt(func, (Object) val);
     }
 
@@ -688,7 +703,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param val
      * @return
      */
-    private FastormSqlBuilder<T> lt(Function<T, Double> func, double val) {
+    public FastormSqlBuilder<T> lt(Function<T, String> func, String val) {
         return lt(func, (Object) val);
     }
 
@@ -698,57 +713,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param val
      * @return
      */
-    private FastormSqlBuilder<T> lt(Function<T, Double> func, Double val) {
-        return lt(func, (Object) val);
-    }
-
-    /**
-     * where #{func} < #{val}
-     * @param func
-     * @param val
-     * @return
-     */
-    private FastormSqlBuilder<T> lt(Function<T, Boolean> func, boolean val) {
-        return lt(func, (Object) val);
-    }
-
-    /**
-     * where #{func} < #{val}
-     * @param func
-     * @param val
-     * @return
-     */
-    private FastormSqlBuilder<T> lt(Function<T, Boolean> func, Boolean val) {
-        return lt(func, (Object) val);
-    }
-
-    /**
-     * where #{func} < #{val}
-     * @param func
-     * @param val
-     * @return
-     */
-    private FastormSqlBuilder<T> lt(Function<T, BigDecimal> func, BigDecimal val) {
-        return lt(func, (Object) val);
-    }
-
-    /**
-     * where #{func} < #{val}
-     * @param func
-     * @param val
-     * @return
-     */
-    private FastormSqlBuilder<T> lt(Function<T, String> func, String val) {
-        return lt(func, (Object) val);
-    }
-
-    /**
-     * where #{func} < #{val}
-     * @param func
-     * @param val
-     * @return
-     */
-    private FastormSqlBuilder<T> lt(Function<T, Date> func, Date val) {
+    public FastormSqlBuilder<T> lt(Function<T, Date> func, Date val) {
         return lt(func, (Object) val);
     }
 
@@ -760,7 +725,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     private <F> FastormSqlBuilder<T> lt(Function<T, F> func, Object val) {
-        String fieldName = findAndCheckFieldName(func, Collections.singletonList(val));
+        String fieldName = findAndCheckColumnName(func, Collections.singletonList(val));
         Class<?> clazz = beanStructure.getReadMethodMap().get(fieldName).getReturnType();
 
         return lt(new NameSqlField(fieldName), new VariableSqlField(clazz, val));
@@ -773,7 +738,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> lt(Function<T, ?> func, SqlField val) {
-        String fieldName = beanStructure.findFieldName(func);
+        String fieldName = beanStructure.findColumnName(func);
         SqlField field = new NameSqlField(fieldName);
 
         return lt(field, val);
@@ -799,7 +764,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param val
      * @return
      */
-    private FastormSqlBuilder<T> ltEq(Function<T, Integer> func, int val) {
+    public FastormSqlBuilder<T> ltEq(Function<T, Integer> func, Integer val) {
         return ltEq(func, (Object) val);
     }
 
@@ -809,7 +774,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param val
      * @return
      */
-    private FastormSqlBuilder<T> ltEq(Function<T, Integer> func, Integer val) {
+    public FastormSqlBuilder<T> ltEq(Function<T, Long> func, Long val) {
         return ltEq(func, (Object) val);
     }
 
@@ -819,7 +784,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param val
      * @return
      */
-    private FastormSqlBuilder<T> ltEq(Function<T, Long> func, long val) {
+    public FastormSqlBuilder<T> ltEq(Function<T, Float> func, Float val) {
         return ltEq(func, (Object) val);
     }
 
@@ -829,7 +794,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param val
      * @return
      */
-    private FastormSqlBuilder<T> ltEq(Function<T, Long> func, Long val) {
+    public FastormSqlBuilder<T> ltEq(Function<T, Double> func, Double val) {
         return ltEq(func, (Object) val);
     }
 
@@ -839,7 +804,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param val
      * @return
      */
-    private FastormSqlBuilder<T> ltEq(Function<T, Float> func, float val) {
+    public FastormSqlBuilder<T> ltEq(Function<T, Boolean> func, Boolean val) {
         return ltEq(func, (Object) val);
     }
 
@@ -849,7 +814,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param val
      * @return
      */
-    private FastormSqlBuilder<T> ltEq(Function<T, Float> func, Float val) {
+    public FastormSqlBuilder<T> ltEq(Function<T, BigDecimal> func, BigDecimal val) {
         return ltEq(func, (Object) val);
     }
 
@@ -859,7 +824,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param val
      * @return
      */
-    private FastormSqlBuilder<T> ltEq(Function<T, Double> func, double val) {
+    public FastormSqlBuilder<T> ltEq(Function<T, String> func, String val) {
         return ltEq(func, (Object) val);
     }
 
@@ -869,57 +834,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param val
      * @return
      */
-    private FastormSqlBuilder<T> ltEq(Function<T, Double> func, Double val) {
-        return ltEq(func, (Object) val);
-    }
-
-    /**
-     * where #{func} <= #{val}
-     * @param func
-     * @param val
-     * @return
-     */
-    private FastormSqlBuilder<T> ltEq(Function<T, Boolean> func, boolean val) {
-        return ltEq(func, (Object) val);
-    }
-
-    /**
-     * where #{func} <= #{val}
-     * @param func
-     * @param val
-     * @return
-     */
-    private FastormSqlBuilder<T> ltEq(Function<T, Boolean> func, Boolean val) {
-        return ltEq(func, (Object) val);
-    }
-
-    /**
-     * where #{func} <= #{val}
-     * @param func
-     * @param val
-     * @return
-     */
-    private FastormSqlBuilder<T> ltEq(Function<T, BigDecimal> func, BigDecimal val) {
-        return ltEq(func, (Object) val);
-    }
-
-    /**
-     * where #{func} <= #{val}
-     * @param func
-     * @param val
-     * @return
-     */
-    private FastormSqlBuilder<T> ltEq(Function<T, String> func, String val) {
-        return ltEq(func, (Object) val);
-    }
-
-    /**
-     * where #{func} <= #{val}
-     * @param func
-     * @param val
-     * @return
-     */
-    private FastormSqlBuilder<T> ltEq(Function<T, Date> func, Date val) {
+    public FastormSqlBuilder<T> ltEq(Function<T, Date> func, Date val) {
         return ltEq(func, (Object) val);
     }
 
@@ -930,7 +845,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     private FastormSqlBuilder<T> ltEq(Function<T, ?> func, Object val) {
-        String fieldName = findAndCheckFieldName(func, Collections.singletonList(val));
+        String fieldName = findAndCheckColumnName(func, Collections.singletonList(val));
         Class<?> clazz = beanStructure.getReadMethodMap().get(fieldName).getReturnType();
 
         return ltEq(new NameSqlField(fieldName), new VariableSqlField(clazz, val));
@@ -943,7 +858,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> ltEq(Function<T, ?> func, SqlField val) {
-        String fieldName = beanStructure.findFieldName(func);
+        String fieldName = beanStructure.findColumnName(func);
         SqlField field = new NameSqlField(fieldName);
 
         return ltEq(field, val);
@@ -969,7 +884,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param val
      * @return
      */
-    private FastormSqlBuilder<T> gt(Function<T, Integer> func, int val) {
+    public FastormSqlBuilder<T> gt(Function<T, Integer> func, Integer val) {
         return gt(func, (Object) val);
     }
 
@@ -979,7 +894,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param val
      * @return
      */
-    private FastormSqlBuilder<T> gt(Function<T, Integer> func, Integer val) {
+    public FastormSqlBuilder<T> gt(Function<T, Long> func, Long val) {
         return gt(func, (Object) val);
     }
 
@@ -989,7 +904,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param val
      * @return
      */
-    private FastormSqlBuilder<T> gt(Function<T, Long> func, long val) {
+    public FastormSqlBuilder<T> gt(Function<T, Float> func, Float val) {
         return gt(func, (Object) val);
     }
 
@@ -999,7 +914,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param val
      * @return
      */
-    private FastormSqlBuilder<T> gt(Function<T, Long> func, Long val) {
+    public FastormSqlBuilder<T> gt(Function<T, Double> func, Double val) {
         return gt(func, (Object) val);
     }
 
@@ -1009,7 +924,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param val
      * @return
      */
-    private FastormSqlBuilder<T> gt(Function<T, Float> func, float val) {
+    public FastormSqlBuilder<T> gt(Function<T, Boolean> func, Boolean val) {
         return gt(func, (Object) val);
     }
 
@@ -1019,7 +934,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param val
      * @return
      */
-    private FastormSqlBuilder<T> gt(Function<T, Float> func, Float val) {
+    public FastormSqlBuilder<T> gt(Function<T, BigDecimal> func, BigDecimal val) {
         return gt(func, (Object) val);
     }
 
@@ -1029,7 +944,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param val
      * @return
      */
-    private FastormSqlBuilder<T> gt(Function<T, Double> func, double val) {
+    public FastormSqlBuilder<T> gt(Function<T, String> func, String val) {
         return gt(func, (Object) val);
     }
 
@@ -1039,57 +954,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param val
      * @return
      */
-    private FastormSqlBuilder<T> gt(Function<T, Double> func, Double val) {
-        return gt(func, (Object) val);
-    }
-
-    /**
-     * where #{func} > #{val}
-     * @param func
-     * @param val
-     * @return
-     */
-    private FastormSqlBuilder<T> gt(Function<T, Boolean> func, boolean val) {
-        return gt(func, (Object) val);
-    }
-
-    /**
-     * where #{func} > #{val}
-     * @param func
-     * @param val
-     * @return
-     */
-    private FastormSqlBuilder<T> gt(Function<T, Boolean> func, Boolean val) {
-        return gt(func, (Object) val);
-    }
-
-    /**
-     * where #{func} > #{val}
-     * @param func
-     * @param val
-     * @return
-     */
-    private FastormSqlBuilder<T> gt(Function<T, BigDecimal> func, BigDecimal val) {
-        return gt(func, (Object) val);
-    }
-
-    /**
-     * where #{func} > #{val}
-     * @param func
-     * @param val
-     * @return
-     */
-    private FastormSqlBuilder<T> gt(Function<T, String> func, String val) {
-        return gt(func, (Object) val);
-    }
-
-    /**
-     * where #{func} > #{val}
-     * @param func
-     * @param val
-     * @return
-     */
-    private FastormSqlBuilder<T> gt(Function<T, Date> func, Date val) {
+    public FastormSqlBuilder<T> gt(Function<T, Date> func, Date val) {
         return gt(func, (Object) val);
     }
 
@@ -1100,7 +965,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     private FastormSqlBuilder<T> gt(Function<T, ?> func, Object val) {
-        String fieldName = findAndCheckFieldName(func, Collections.singletonList(val));
+        String fieldName = findAndCheckColumnName(func, Collections.singletonList(val));
         Class<?> clazz = beanStructure.getReadMethodMap().get(fieldName).getReturnType();
 
         return gt(new NameSqlField(fieldName), new VariableSqlField(clazz, val));
@@ -1113,7 +978,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> gt(Function<T, ?> func, SqlField val) {
-        String fieldName = beanStructure.findFieldName(func);
+        String fieldName = beanStructure.findColumnName(func);
         SqlField field = new NameSqlField(fieldName);
 
         return gt(field, val);
@@ -1139,7 +1004,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param val
      * @return
      */
-    private FastormSqlBuilder<T> gtEq(Function<T, Integer> func, int val) {
+    public FastormSqlBuilder<T> gtEq(Function<T, Integer> func, Integer val) {
         return gtEq(func, (Object) val);
     }
 
@@ -1149,7 +1014,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param val
      * @return
      */
-    private FastormSqlBuilder<T> gtEq(Function<T, Integer> func, Integer val) {
+    public FastormSqlBuilder<T> gtEq(Function<T, Long> func, Long val) {
         return gtEq(func, (Object) val);
     }
 
@@ -1159,7 +1024,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param val
      * @return
      */
-    private FastormSqlBuilder<T> gtEq(Function<T, Long> func, long val) {
+    public FastormSqlBuilder<T> gtEq(Function<T, Float> func, Float val) {
         return gtEq(func, (Object) val);
     }
 
@@ -1169,7 +1034,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param val
      * @return
      */
-    private FastormSqlBuilder<T> gtEq(Function<T, Long> func, Long val) {
+    public FastormSqlBuilder<T> gtEq(Function<T, Double> func, Double val) {
         return gtEq(func, (Object) val);
     }
 
@@ -1179,7 +1044,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param val
      * @return
      */
-    private FastormSqlBuilder<T> gtEq(Function<T, Float> func, float val) {
+    public FastormSqlBuilder<T> gtEq(Function<T, Boolean> func, Boolean val) {
         return gtEq(func, (Object) val);
     }
 
@@ -1189,7 +1054,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param val
      * @return
      */
-    private FastormSqlBuilder<T> gtEq(Function<T, Float> func, Float val) {
+    public FastormSqlBuilder<T> gtEq(Function<T, BigDecimal> func, BigDecimal val) {
         return gtEq(func, (Object) val);
     }
 
@@ -1199,7 +1064,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param val
      * @return
      */
-    private FastormSqlBuilder<T> gtEq(Function<T, Double> func, double val) {
+    public FastormSqlBuilder<T> gtEq(Function<T, String> func, String val) {
         return gtEq(func, (Object) val);
     }
 
@@ -1209,7 +1074,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param val
      * @return
      */
-    private FastormSqlBuilder<T> gtEq(Function<T, Double> func, Double val) {
+    public FastormSqlBuilder<T> gtEq(Function<T, Date> func, Date val) {
         return gtEq(func, (Object) val);
     }
 
@@ -1219,58 +1084,8 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param val
      * @return
      */
-    private FastormSqlBuilder<T> gtEq(Function<T, Boolean> func, boolean val) {
-        return gtEq(func, (Object) val);
-    }
-
-    /**
-     * where #{func} >= #{val}
-     * @param func
-     * @param val
-     * @return
-     */
-    private FastormSqlBuilder<T> gtEq(Function<T, Boolean> func, Boolean val) {
-        return gtEq(func, (Object) val);
-    }
-
-    /**
-     * where #{func} >= #{val}
-     * @param func
-     * @param val
-     * @return
-     */
-    private FastormSqlBuilder<T> gtEq(Function<T, BigDecimal> func, BigDecimal val) {
-        return gtEq(func, (Object) val);
-    }
-
-    /**
-     * where #{func} >= #{val}
-     * @param func
-     * @param val
-     * @return
-     */
-    private FastormSqlBuilder<T> gtEq(Function<T, String> func, String val) {
-        return gtEq(func, (Object) val);
-    }
-
-    /**
-     * where #{func} >= #{val}
-     * @param func
-     * @param val
-     * @return
-     */
-    private FastormSqlBuilder<T> gtEq(Function<T, Date> func, Date val) {
-        return gtEq(func, (Object) val);
-    }
-
-    /**
-     * where #{func} >= #{val}
-     * @param func
-     * @param val
-     * @return
-     */
-    public FastormSqlBuilder<T> gtEq(Function<T, ?> func, Object val) {
-        String fieldName = findAndCheckFieldName(func, Collections.singletonList(val));
+    private FastormSqlBuilder<T> gtEq(Function<T, ?> func, Object val) {
+        String fieldName = findAndCheckColumnName(func, Collections.singletonList(val));
         Class<?> clazz = beanStructure.getReadMethodMap().get(fieldName).getReturnType();
 
         return gtEq(new NameSqlField(fieldName), new VariableSqlField(clazz, val));
@@ -1283,7 +1098,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> gtEq(Function<T, ?> func, SqlField val) {
-        String fieldName = beanStructure.findFieldName(func);
+        String fieldName = beanStructure.findColumnName(func);
         SqlField field = new NameSqlField(fieldName);
 
         return gtEq(field, val);
@@ -1309,32 +1124,8 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param list
      * @return
      */
-    public FastormSqlBuilder<T> in(Function<T, ?> func, int... list) {
-        ObjCollection collection = new ObjCollection();
-        Collections.addAll(collection, list);
-        return in(func, collection);
-    }
-
-    /**
-     * where #{func} in (...)
-     * @param func
-     * @param list
-     * @return
-     */
     public FastormSqlBuilder<T> in(Function<T, ?> func, Integer... list) {
-        ObjCollection collection = new ObjCollection();
-        Collections.addAll(collection, list);
-        return in(func, collection);
-    }
-
-    /**
-     * where #{func} in (...)
-     * @param func
-     * @param list
-     * @return
-     */
-    public FastormSqlBuilder<T> in(Function<T, ?> func, long... list) {
-        ObjCollection collection = new ObjCollection();
+        ObjCollection collection = new ObjCollection(list.length);
         Collections.addAll(collection, list);
         return in(func, collection);
     }
@@ -1346,19 +1137,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> in(Function<T, ?> func, Long... list) {
-        ObjCollection collection = new ObjCollection();
-        Collections.addAll(collection, list);
-        return in(func, collection);
-    }
-
-    /**
-     * where #{func} in (...)
-     * @param func
-     * @param list
-     * @return
-     */
-    public FastormSqlBuilder<T> in(Function<T, ?> func, float... list) {
-        ObjCollection collection = new ObjCollection();
+        ObjCollection collection = new ObjCollection(list.length);
         Collections.addAll(collection, list);
         return in(func, collection);
     }
@@ -1370,19 +1149,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> in(Function<T, ?> func, Float... list) {
-        ObjCollection collection = new ObjCollection();
-        Collections.addAll(collection, list);
-        return in(func, collection);
-    }
-
-    /**
-     * where #{func} in (...)
-     * @param func
-     * @param list
-     * @return
-     */
-    public FastormSqlBuilder<T> in(Function<T, ?> func, double... list) {
-        ObjCollection collection = new ObjCollection();
+        ObjCollection collection = new ObjCollection(list.length);
         Collections.addAll(collection, list);
         return in(func, collection);
     }
@@ -1394,19 +1161,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> in(Function<T, ?> func, Double... list) {
-        ObjCollection collection = new ObjCollection();
-        Collections.addAll(collection, list);
-        return in(func, collection);
-    }
-
-    /**
-     * where #{func} in (...)
-     * @param func
-     * @param list
-     * @return
-     */
-    public FastormSqlBuilder<T> in(Function<T, ?> func, boolean... list) {
-        ObjCollection collection = new ObjCollection();
+        ObjCollection collection = new ObjCollection(list.length);
         Collections.addAll(collection, list);
         return in(func, collection);
     }
@@ -1418,7 +1173,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> in(Function<T, ?> func, Boolean... list) {
-        ObjCollection collection = new ObjCollection();
+        ObjCollection collection = new ObjCollection(list.length);
         Collections.addAll(collection, list);
         return in(func, collection);
     }
@@ -1430,7 +1185,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> in(Function<T, ?> func, String... list) {
-        ObjCollection collection = new ObjCollection();
+        ObjCollection collection = new ObjCollection(list.length);
         Collections.addAll(collection, list);
         return in(func, collection);
     }
@@ -1442,7 +1197,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> in(Function<T, ?> func, BigDecimal... list) {
-        ObjCollection collection = new ObjCollection();
+        ObjCollection collection = new ObjCollection(list.length);
         Collections.addAll(collection, list);
         return in(func, collection);
     }
@@ -1454,7 +1209,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> in(Function<T, ?> func, Date... list) {
-        ObjCollection collection = new ObjCollection();
+        ObjCollection collection = new ObjCollection(list.length);
         Collections.addAll(collection, list);
         return in(func, collection);
     }
@@ -1466,10 +1221,10 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> in(Function<T, ?> func, ObjCollection collection) {
-        String fieldName = findAndCheckFieldName(func, collection);
+        String fieldName = findAndCheckColumnName(func, collection);
         Class<?> clazz = beanStructure.getReadMethodMap().get(fieldName).getReturnType();
 
-        SqlFieldCollection sqlFieldList = new SqlFieldCollection();
+        SqlFieldCollection sqlFieldList = new SqlFieldCollection(collection.size());
         for (Object obj : collection) {
             sqlFieldList.add(new VariableSqlField(clazz, obj));
         }
@@ -1484,11 +1239,11 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> in(Function<T, ?> func, SqlField... collection) {
-        String fieldName = beanStructure.findFieldName(func);
-        List<SqlField> sqlFieldList = new ArrayList<>(collection.length);
-        Collections.addAll(sqlFieldList, collection);
+        String fieldName = beanStructure.findColumnName(func);
+        SqlFieldCollection fieldCollection = new SqlFieldCollection(collection.length);
+        Collections.addAll(fieldCollection, collection);
 
-        return in(new NameSqlField(fieldName), new SqlFieldCollection(sqlFieldList));
+        return in(new NameSqlField(fieldName), fieldCollection);
     }
 
     /**
@@ -1498,7 +1253,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> in(Function<T, ?> func, SqlFieldCollection collection) {
-        String fieldName = beanStructure.findFieldName(func);
+        String fieldName = beanStructure.findColumnName(func);
         SqlField field = new NameSqlField(fieldName);
 
         return in(field, collection);
@@ -1534,32 +1289,8 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param list
      * @return
      */
-    public FastormSqlBuilder<T> notIn(Function<T, ?> func, int... list) {
-        ObjCollection collection = new ObjCollection();
-        Collections.addAll(collection, list);
-        return notIn(func, collection);
-    }
-
-    /**
-     * where #{func} not in (...)
-     * @param func
-     * @param list
-     * @return
-     */
     public FastormSqlBuilder<T> notIn(Function<T, ?> func, Integer... list) {
-        ObjCollection collection = new ObjCollection();
-        Collections.addAll(collection, list);
-        return notIn(func, collection);
-    }
-
-    /**
-     * where #{func} not in (...)
-     * @param func
-     * @param list
-     * @return
-     */
-    public FastormSqlBuilder<T> notIn(Function<T, ?> func, long... list) {
-        ObjCollection collection = new ObjCollection();
+        ObjCollection collection = new ObjCollection(list.length);
         Collections.addAll(collection, list);
         return notIn(func, collection);
     }
@@ -1571,19 +1302,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> notIn(Function<T, ?> func, Long... list) {
-        ObjCollection collection = new ObjCollection();
-        Collections.addAll(collection, list);
-        return notIn(func, collection);
-    }
-
-    /**
-     * where #{func} not in (...)
-     * @param func
-     * @param list
-     * @return
-     */
-    public FastormSqlBuilder<T> notIn(Function<T, ?> func, float... list) {
-        ObjCollection collection = new ObjCollection();
+        ObjCollection collection = new ObjCollection(list.length);
         Collections.addAll(collection, list);
         return notIn(func, collection);
     }
@@ -1595,19 +1314,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> notIn(Function<T, ?> func, Float... list) {
-        ObjCollection collection = new ObjCollection();
-        Collections.addAll(collection, list);
-        return notIn(func, collection);
-    }
-
-    /**
-     * where #{func} not in (...)
-     * @param func
-     * @param list
-     * @return
-     */
-    public FastormSqlBuilder<T> notIn(Function<T, ?> func, double... list) {
-        ObjCollection collection = new ObjCollection();
+        ObjCollection collection = new ObjCollection(list.length);
         Collections.addAll(collection, list);
         return notIn(func, collection);
     }
@@ -1619,19 +1326,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> notIn(Function<T, ?> func, Double... list) {
-        ObjCollection collection = new ObjCollection();
-        Collections.addAll(collection, list);
-        return notIn(func, collection);
-    }
-
-    /**
-     * where #{func} not in (...)
-     * @param func
-     * @param list
-     * @return
-     */
-    public FastormSqlBuilder<T> notIn(Function<T, ?> func, boolean... list) {
-        ObjCollection collection = new ObjCollection();
+        ObjCollection collection = new ObjCollection(list.length);
         Collections.addAll(collection, list);
         return notIn(func, collection);
     }
@@ -1643,7 +1338,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> notIn(Function<T, ?> func, Boolean... list) {
-        ObjCollection collection = new ObjCollection();
+        ObjCollection collection = new ObjCollection(list.length);
         Collections.addAll(collection, list);
         return notIn(func, collection);
     }
@@ -1655,7 +1350,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> notIn(Function<T, ?> func, String... list) {
-        ObjCollection collection = new ObjCollection();
+        ObjCollection collection = new ObjCollection(list.length);
         Collections.addAll(collection, list);
         return notIn(func, collection);
     }
@@ -1667,7 +1362,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> notIn(Function<T, ?> func, BigDecimal... list) {
-        ObjCollection collection = new ObjCollection();
+        ObjCollection collection = new ObjCollection(list.length);
         Collections.addAll(collection, list);
         return notIn(func, collection);
     }
@@ -1679,7 +1374,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> notIn(Function<T, ?> func, Date... list) {
-        ObjCollection collection = new ObjCollection();
+        ObjCollection collection = new ObjCollection(list.length);
         Collections.addAll(collection, list);
         return notIn(func, collection);
     }
@@ -1691,10 +1386,10 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> notIn(Function<T, ?> func, ObjCollection collection) {
-        String fieldName = findAndCheckFieldName(func, collection);
+        String fieldName = findAndCheckColumnName(func, collection);
         Class<?> clazz = beanStructure.getReadMethodMap().get(fieldName).getReturnType();
 
-        SqlFieldCollection sqlFieldList = new SqlFieldCollection();
+        SqlFieldCollection sqlFieldList = new SqlFieldCollection(collection.size());
         for (Object obj : collection) {
             sqlFieldList.add(new VariableSqlField(clazz, obj));
         }
@@ -1709,11 +1404,11 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> notIn(Function<T, ?> func, SqlField... collection) {
-        String fieldName = beanStructure.findFieldName(func);
-        List<SqlField> sqlFieldList = new ArrayList<>(collection.length);
-        Collections.addAll(sqlFieldList, collection);
+        String fieldName = beanStructure.findColumnName(func);
+        SqlFieldCollection fieldCollection = new SqlFieldCollection(collection.length);
+        Collections.addAll(fieldCollection, collection);
 
-        return notIn(new NameSqlField(fieldName), new SqlFieldCollection(sqlFieldList));
+        return notIn(new NameSqlField(fieldName), fieldCollection);
     }
 
     /**
@@ -1723,7 +1418,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> notIn(Function<T, ?> func, SqlFieldCollection collection) {
-        String fieldName = beanStructure.findFieldName(func);
+        String fieldName = beanStructure.findColumnName(func);
         SqlField field = new NameSqlField(fieldName);
 
         return notIn(field, collection);
@@ -1760,7 +1455,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> like(Function<T, String> func, String val) {
-        String fieldName = beanStructure.findFieldName(func);
+        String fieldName = beanStructure.findColumnName(func);
         SqlField field = new NameSqlField(fieldName);
         SqlField v = new VariableSqlField(String.class, val);
 
@@ -1774,7 +1469,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> likeStart(Function<T, String> func, String val) {
-        String fieldName = beanStructure.findFieldName(func);
+        String fieldName = beanStructure.findColumnName(func);
         SqlField field = new NameSqlField(fieldName);
         SqlField v = new VariableSqlField(String.class, val);
 
@@ -1788,7 +1483,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> likeEnd(Function<T, String> func, String val) {
-        String fieldName = beanStructure.findFieldName(func);
+        String fieldName = beanStructure.findColumnName(func);
         SqlField field = new NameSqlField(fieldName);
         SqlField v = new VariableSqlField(String.class, val);
 
@@ -1802,7 +1497,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> like(Function<T, ?> func, SqlField val) {
-        String fieldName = beanStructure.findFieldName(func);
+        String fieldName = beanStructure.findColumnName(func);
         SqlField field = new NameSqlField(fieldName);
 
         return like(field, val);
@@ -1828,7 +1523,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> groupBy(Function<T, ?>... fields) {
-        FuncCollection<T> collection = new FuncCollection<>();
+        FuncCollection<T> collection = new FuncCollection<>(fields.length);
         Collections.addAll(collection, fields);
         return groupBy(collection);
     }
@@ -1839,9 +1534,9 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> groupBy(FuncCollection<T> collection) {
-        SqlFieldCollection fieldCollection = new SqlFieldCollection();
+        SqlFieldCollection fieldCollection = new SqlFieldCollection(collection.size());
         for (Function<T, ?> function : collection) {
-            String fieldName = beanStructure.findFieldName(function);
+            String fieldName = beanStructure.findColumnName(function);
             fieldCollection.add(new NameSqlField(fieldName));
         }
 
@@ -1886,7 +1581,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> orderBy(Function<T, ?> func, SqlOrderType type) {
-        String fieldName = beanStructure.findFieldName(func);
+        String fieldName = beanStructure.findColumnName(func);
         SqlField field = new NameSqlField(fieldName);
 
         return orderBy(new StandardSqlSqlOrder(field, type));
@@ -1898,7 +1593,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> orderBy(SqlOrder... orders) {
-        SqlOrderCollection collection = new SqlOrderCollection();
+        SqlOrderCollection collection = new SqlOrderCollection(orders.length);
         Collections.addAll(collection, orders);
 
         return orderBy(collection);
@@ -1956,9 +1651,10 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param <F>
      * @return
      */
-    private <F> String findAndCheckFieldName(Function<T, F> func, List<Object> list) {
-        String name = beanStructure.findFieldName(func);
-        Field field = beanStructure.getFieldMap().get(name);
+    private <F> String findAndCheckColumnName(Function<T, F> func, List<Object> list) {
+        String name = beanStructure.findColumnName(func);
+        String fieldName = beanStructure.findFieldName(func);
+        Field field = beanStructure.getFieldMap().get(fieldName);
 
         for (Object obj : list) {
             if (!field.getType().equals(obj.getClass())) {

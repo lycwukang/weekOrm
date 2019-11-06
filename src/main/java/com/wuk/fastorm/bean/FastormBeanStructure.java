@@ -49,13 +49,21 @@ public class FastormBeanStructure<T> extends BeanStructure<T> {
     /**
      * 获取列名称
      * @param function
-     * @param <F>
      * @return
      */
-    public <F> String findFieldName(Function<T, F> function) {
+    public String findFieldName(Function<T, ?> function) {
         function.apply(instance);
 
         return instanceLastOperateFeature.findLastOperateFieldName();
+    }
+
+    /**
+     * 获取列名称
+     * @param function
+     * @return
+     */
+    public String findColumnName(Function<T, ?> function) {
+        return columnMap.get(findFieldName(function)).value();
     }
 
     /**

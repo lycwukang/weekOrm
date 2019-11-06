@@ -5,4 +5,7 @@ import java.util.function.Function;
 
 public class FuncCollection<T> extends ArrayList<Function<T, ?>> {
 
+    public FuncCollection(int size) {
+        super(size);
+    }
 }

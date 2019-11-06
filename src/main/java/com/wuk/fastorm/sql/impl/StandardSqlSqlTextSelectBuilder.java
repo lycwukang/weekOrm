@@ -17,17 +17,17 @@ public class StandardSqlSqlTextSelectBuilder implements StandardSqlSqlTextBuilde
             throw new FastormSqlException("构建sql出错，未声明table名称");
         }
 
-        StringBuilder builder = new StringBuilder("SELECT ");
+        if (sql.getFieldList().size() == 0) {
+            throw new FastormSqlException("构建sql出错，没有任何要查询的字段");
+        }
 
-        if (sql.getFieldList().size() > 0) {
-            for (int i = 0; i < sql.getFieldList().size(); i++) {
-                if (i > 0) {
-                    builder.append(", ");
-                }
-                builder.append(sql.getFieldList().get(i).getSql());
+        StringBuilder builder = new StringBuilder(String.format("%s ", sql.getType().getSql()));
+
+        for (int i = 0; i < sql.getFieldList().size(); i++) {
+            if (i > 0) {
+                builder.append(", ");
             }
-        } else {
-            builder.append("*");
+            builder.append(sql.getFieldList().get(i).getSql());
         }
         builder.append(" FROM ");
 
