@@ -398,7 +398,7 @@ public class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * where 1=1
      * @return
      */
-    public FastormSqlBuilder<T> oneEqOne() {
+    public FastormSqlBuilder<T> empty() {
         return eq(new NumberSqlField(1), new NumberSqlField(1));
     }
 
@@ -1682,7 +1682,7 @@ public class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      */
     private void checkTypes(Class<?> type, List<Object> list) {
         for (Object obj : list) {
-            if (!type.equals(obj.getClass())) {
+            if (obj != null && !type.equals(obj.getClass())) {
                 throw new FastormSqlException(String.format("参数类型不一致，%s != %s", type.getName(), obj.getClass().getName()));
             }
         }

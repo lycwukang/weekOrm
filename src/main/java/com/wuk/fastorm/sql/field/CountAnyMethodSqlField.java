@@ -14,7 +14,7 @@ public class CountAnyMethodSqlField extends AbstractSqlField {
     private SqlField field;
 
     public CountAnyMethodSqlField() {
-        super("");
+        this("");
     }
 
     public CountAnyMethodSqlField(String aliasName) {
