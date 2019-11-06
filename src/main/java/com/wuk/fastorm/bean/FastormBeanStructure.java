@@ -63,7 +63,25 @@ public class FastormBeanStructure<T> extends BeanStructure<T> {
      * @return
      */
     public String findColumnName(Function<T, ?> function) {
-        return columnMap.get(findFieldName(function)).value();
+        return findColumnName(findFieldName(function));
+    }
+
+    /**
+     * 获取列名称
+     * @param fieldName
+     * @return
+     */
+    public String findColumnName(String fieldName) {
+        return columnMap.get(fieldName).value();
+    }
+
+    /**
+     * 列是否是autoIncrement
+     * @param fieldName
+     * @return
+     */
+    public boolean isAutoIncrement(String fieldName) {
+        return columnMap.get(fieldName).autoIncrement();
     }
 
     /**

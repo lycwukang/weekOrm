@@ -1,18 +1,13 @@
 package com.wuk.fastorm.sql.impl;
 
-import com.wuk.fastorm.annontation.FastormColumn;
 import com.wuk.fastorm.bean.FastormBeanStructure;
 import com.wuk.fastorm.exception.FastormException;
 import com.wuk.fastorm.exception.FastormSqlException;
 import com.wuk.fastorm.sql.*;
 import com.wuk.fastorm.sql.expression.*;
-import com.wuk.fastorm.sql.field.CharSqlField;
-import com.wuk.fastorm.sql.field.ConcatMethodSqlField;
-import com.wuk.fastorm.sql.field.NameSqlField;
-import com.wuk.fastorm.sql.field.VariableSqlField;
+import com.wuk.fastorm.sql.field.*;
 import com.wuk.fastorm.sql.collection.*;
 
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.util.*;
@@ -24,7 +19,7 @@ import java.util.function.Function;
  * 创建sql的建造类
  * @param <T>
  */
-public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
+public class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
 
     /**
      * class的BeanStructure实例
@@ -68,8 +63,8 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
     public FastormSqlBuilder<T> select() {
         SqlFieldCollection collection = new SqlFieldCollection(beanStructure.getFieldNames().size());
         for (String fieldName : beanStructure.getFieldNames()) {
-            FastormColumn fastormColumn = beanStructure.getColumnMap().get(fieldName);
-            collection.add(new NameSqlField(fastormColumn.value()));
+            String columnName = beanStructure.findColumnName(fieldName);
+            collection.add(new NameSqlField(columnName));
         }
         return select(collection);
     }
@@ -94,8 +89,8 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
     public FastormSqlBuilder<T> select(FuncCollection<T> collection) {
         SqlFieldCollection fieldCollection = new SqlFieldCollection(collection.size());
         for (Function<T, ?> function : collection) {
-            String fieldName = beanStructure.findColumnName(function);
-            fieldCollection.add(new NameSqlField(fieldName));
+            String columnName = beanStructure.findColumnName(function);
+            fieldCollection.add(new NameSqlField(columnName));
         }
 
         return select(fieldCollection);
@@ -148,8 +143,8 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
 
         if (sql.getInsertFieldList().size() == 0) {
             for (String fieldName : beanStructure.getFieldNames()) {
-                String columnName = beanStructure.getColumnMap().get(fieldName).value();
-                boolean autoIncrement = beanStructure.getColumnMap().get(fieldName).autoIncrement();
+                String columnName = beanStructure.findColumnName(fieldName);
+                boolean autoIncrement = beanStructure.isAutoIncrement(fieldName);
 
                 if (!autoIncrement) {
                     sql.addInsertFieldList(new NameSqlField(columnName));
@@ -164,7 +159,7 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
 
             List<SqlParam> insertDataParams = new ArrayList<>(beanStructure.getFieldNames().size());
             for (String fieldName : beanStructure.getFieldNames()) {
-                boolean autoIncrement = beanStructure.getColumnMap().get(fieldName).autoIncrement();
+                boolean autoIncrement = beanStructure.isAutoIncrement(fieldName);
 
                 if (!autoIncrement) {
                     Method method = beanStructure.getReadMethodMap().get(fieldName);
@@ -292,10 +287,13 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     private FastormSqlBuilder<T> set(Function<T, ?> func, Object val) {
-        String fieldName = findAndCheckColumnName(func, Collections.singletonList(val));
+        String fieldName = beanStructure.findFieldName(func);
+        String columnName = beanStructure.findColumnName(fieldName);
         Class<?> clazz = beanStructure.getReadMethodMap().get(fieldName).getReturnType();
-        SqlField field = new VariableSqlField(clazz, val);
-        sql.addSet(new StandardSqlSqlSet(fieldName, field));
+
+        checkTypes(clazz, Collections.singletonList(val));
+
+        sql.addSet(new StandardSqlSqlSet(columnName, new VariableSqlField(clazz, val)));
 
         return this;
     }
@@ -307,8 +305,8 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> set(Function<T, ?> func, SqlField val) {
-        String fieldName = beanStructure.findColumnName(func);
-        sql.addSet(new StandardSqlSqlSet(fieldName, val));
+        String columnName = beanStructure.findColumnName(func);
+        sql.addSet(new StandardSqlSqlSet(columnName, val));
 
         return this;
     }
@@ -394,6 +392,14 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
         joinType = SqlJoinType.OR;
 
         return this;
+    }
+
+    /**
+     * where 1=1
+     * @return
+     */
+    public FastormSqlBuilder<T> oneEqOne() {
+        return eq(new NumberSqlField(1), new NumberSqlField(1));
     }
 
     /**
@@ -483,10 +489,13 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     private FastormSqlBuilder<T> eq(Function<T, ?> func, Object val) {
-        String fieldName = findAndCheckColumnName(func, Collections.singletonList(val));
+        String fieldName = beanStructure.findFieldName(func);
+        String columnName = beanStructure.findColumnName(fieldName);
         Class<?> clazz = beanStructure.getReadMethodMap().get(fieldName).getReturnType();
 
-        return eq(new NameSqlField(fieldName), new VariableSqlField(clazz, val));
+        checkTypes(clazz, Collections.singletonList(val));
+
+        return eq(new NameSqlField(columnName), new VariableSqlField(clazz, val));
     }
 
     /**
@@ -496,8 +505,8 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> eq(Function<T, ?> func, SqlField val) {
-        String fieldName = beanStructure.findColumnName(func);
-        SqlField field = new NameSqlField(fieldName);
+        String columnName = beanStructure.findColumnName(func);
+        SqlField field = new NameSqlField(columnName);
 
         return eq(field, val);
     }
@@ -603,10 +612,13 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     private FastormSqlBuilder<T> notEq(Function<T, ?> func, Object val) {
-        String fieldName = findAndCheckColumnName(func, Collections.singletonList(val));
+        String fieldName = beanStructure.findFieldName(func);
+        String columnName = beanStructure.findColumnName(fieldName);
         Class<?> clazz = beanStructure.getReadMethodMap().get(fieldName).getReturnType();
 
-        return notEq(new NameSqlField(fieldName), new VariableSqlField(clazz, val));
+        checkTypes(clazz, Collections.singletonList(val));
+
+        return notEq(new NameSqlField(columnName), new VariableSqlField(clazz, val));
     }
 
     /**
@@ -617,8 +629,8 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public <F> FastormSqlBuilder<T> notEq(Function<T, F> func, SqlField val) {
-        String fieldName = beanStructure.findColumnName(func);
-        SqlField field = new NameSqlField(fieldName);
+        String columnName = beanStructure.findColumnName(func);
+        SqlField field = new NameSqlField(columnName);
 
         return notEq(field, val);
     }
@@ -725,10 +737,13 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     private <F> FastormSqlBuilder<T> lt(Function<T, F> func, Object val) {
-        String fieldName = findAndCheckColumnName(func, Collections.singletonList(val));
+        String fieldName = beanStructure.findFieldName(func);
+        String columnName = beanStructure.findColumnName(fieldName);
         Class<?> clazz = beanStructure.getReadMethodMap().get(fieldName).getReturnType();
 
-        return lt(new NameSqlField(fieldName), new VariableSqlField(clazz, val));
+        checkTypes(clazz, Collections.singletonList(val));
+
+        return lt(new NameSqlField(columnName), new VariableSqlField(clazz, val));
     }
 
     /**
@@ -738,8 +753,8 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> lt(Function<T, ?> func, SqlField val) {
-        String fieldName = beanStructure.findColumnName(func);
-        SqlField field = new NameSqlField(fieldName);
+        String columnName = beanStructure.findColumnName(func);
+        SqlField field = new NameSqlField(columnName);
 
         return lt(field, val);
     }
@@ -845,10 +860,13 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     private FastormSqlBuilder<T> ltEq(Function<T, ?> func, Object val) {
-        String fieldName = findAndCheckColumnName(func, Collections.singletonList(val));
+        String fieldName = beanStructure.findFieldName(func);
+        String columnName = beanStructure.findColumnName(fieldName);
         Class<?> clazz = beanStructure.getReadMethodMap().get(fieldName).getReturnType();
 
-        return ltEq(new NameSqlField(fieldName), new VariableSqlField(clazz, val));
+        checkTypes(clazz, Collections.singletonList(val));
+
+        return ltEq(new NameSqlField(columnName), new VariableSqlField(clazz, val));
     }
 
     /**
@@ -858,8 +876,8 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> ltEq(Function<T, ?> func, SqlField val) {
-        String fieldName = beanStructure.findColumnName(func);
-        SqlField field = new NameSqlField(fieldName);
+        String columnName = beanStructure.findColumnName(func);
+        SqlField field = new NameSqlField(columnName);
 
         return ltEq(field, val);
     }
@@ -965,8 +983,11 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     private FastormSqlBuilder<T> gt(Function<T, ?> func, Object val) {
-        String fieldName = findAndCheckColumnName(func, Collections.singletonList(val));
+        String fieldName = beanStructure.findFieldName(func);
+        String columnName = beanStructure.findColumnName(fieldName);
         Class<?> clazz = beanStructure.getReadMethodMap().get(fieldName).getReturnType();
+
+        checkTypes(clazz, Collections.singletonList(val));
 
         return gt(new NameSqlField(fieldName), new VariableSqlField(clazz, val));
     }
@@ -978,8 +999,8 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> gt(Function<T, ?> func, SqlField val) {
-        String fieldName = beanStructure.findColumnName(func);
-        SqlField field = new NameSqlField(fieldName);
+        String columnName = beanStructure.findColumnName(func);
+        SqlField field = new NameSqlField(columnName);
 
         return gt(field, val);
     }
@@ -1085,10 +1106,13 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     private FastormSqlBuilder<T> gtEq(Function<T, ?> func, Object val) {
-        String fieldName = findAndCheckColumnName(func, Collections.singletonList(val));
+        String fieldName = beanStructure.findFieldName(func);
+        String columnName = beanStructure.findColumnName(fieldName);
         Class<?> clazz = beanStructure.getReadMethodMap().get(fieldName).getReturnType();
 
-        return gtEq(new NameSqlField(fieldName), new VariableSqlField(clazz, val));
+        checkTypes(clazz, Collections.singletonList(val));
+
+        return gtEq(new NameSqlField(columnName), new VariableSqlField(clazz, val));
     }
 
     /**
@@ -1098,8 +1122,8 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> gtEq(Function<T, ?> func, SqlField val) {
-        String fieldName = beanStructure.findColumnName(func);
-        SqlField field = new NameSqlField(fieldName);
+        String columnName = beanStructure.findColumnName(func);
+        SqlField field = new NameSqlField(columnName);
 
         return gtEq(field, val);
     }
@@ -1221,15 +1245,18 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> in(Function<T, ?> func, ObjCollection collection) {
-        String fieldName = findAndCheckColumnName(func, collection);
+        String fieldName = beanStructure.findFieldName(func);
+        String columnName = beanStructure.findColumnName(fieldName);
         Class<?> clazz = beanStructure.getReadMethodMap().get(fieldName).getReturnType();
+
+        checkTypes(clazz, collection);
 
         SqlFieldCollection sqlFieldList = new SqlFieldCollection(collection.size());
         for (Object obj : collection) {
             sqlFieldList.add(new VariableSqlField(clazz, obj));
         }
 
-        return in(new NameSqlField(fieldName), sqlFieldList);
+        return in(new NameSqlField(columnName), sqlFieldList);
     }
 
     /**
@@ -1239,11 +1266,11 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> in(Function<T, ?> func, SqlField... collection) {
-        String fieldName = beanStructure.findColumnName(func);
+        String columnName = beanStructure.findColumnName(func);
         SqlFieldCollection fieldCollection = new SqlFieldCollection(collection.length);
         Collections.addAll(fieldCollection, collection);
 
-        return in(new NameSqlField(fieldName), fieldCollection);
+        return in(new NameSqlField(columnName), fieldCollection);
     }
 
     /**
@@ -1253,8 +1280,8 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> in(Function<T, ?> func, SqlFieldCollection collection) {
-        String fieldName = beanStructure.findColumnName(func);
-        SqlField field = new NameSqlField(fieldName);
+        String columnName = beanStructure.findColumnName(func);
+        SqlField field = new NameSqlField(columnName);
 
         return in(field, collection);
     }
@@ -1386,15 +1413,18 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> notIn(Function<T, ?> func, ObjCollection collection) {
-        String fieldName = findAndCheckColumnName(func, collection);
+        String fieldName = beanStructure.findFieldName(func);
+        String columnName = beanStructure.findColumnName(fieldName);
         Class<?> clazz = beanStructure.getReadMethodMap().get(fieldName).getReturnType();
+
+        checkTypes(clazz, collection);
 
         SqlFieldCollection sqlFieldList = new SqlFieldCollection(collection.size());
         for (Object obj : collection) {
             sqlFieldList.add(new VariableSqlField(clazz, obj));
         }
 
-        return notIn(new NameSqlField(fieldName), sqlFieldList);
+        return notIn(new NameSqlField(columnName), sqlFieldList);
     }
 
     /**
@@ -1404,11 +1434,11 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> notIn(Function<T, ?> func, SqlField... collection) {
-        String fieldName = beanStructure.findColumnName(func);
+        String columnName = beanStructure.findColumnName(func);
         SqlFieldCollection fieldCollection = new SqlFieldCollection(collection.length);
         Collections.addAll(fieldCollection, collection);
 
-        return notIn(new NameSqlField(fieldName), fieldCollection);
+        return notIn(new NameSqlField(columnName), fieldCollection);
     }
 
     /**
@@ -1418,8 +1448,8 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> notIn(Function<T, ?> func, SqlFieldCollection collection) {
-        String fieldName = beanStructure.findColumnName(func);
-        SqlField field = new NameSqlField(fieldName);
+        String columnName = beanStructure.findColumnName(func);
+        SqlField field = new NameSqlField(columnName);
 
         return notIn(field, collection);
     }
@@ -1455,8 +1485,8 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> like(Function<T, String> func, String val) {
-        String fieldName = beanStructure.findColumnName(func);
-        SqlField field = new NameSqlField(fieldName);
+        String columnName = beanStructure.findColumnName(func);
+        SqlField field = new NameSqlField(columnName);
         SqlField v = new VariableSqlField(String.class, val);
 
         return like(field, new ConcatMethodSqlField(v, 1, new CharSqlField("%"), new CharSqlField("%")));
@@ -1469,8 +1499,8 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> likeStart(Function<T, String> func, String val) {
-        String fieldName = beanStructure.findColumnName(func);
-        SqlField field = new NameSqlField(fieldName);
+        String columnName = beanStructure.findColumnName(func);
+        SqlField field = new NameSqlField(columnName);
         SqlField v = new VariableSqlField(String.class, val);
 
         return like(field, new ConcatMethodSqlField(v, 0, new CharSqlField("%")));
@@ -1483,8 +1513,8 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> likeEnd(Function<T, String> func, String val) {
-        String fieldName = beanStructure.findColumnName(func);
-        SqlField field = new NameSqlField(fieldName);
+        String columnName = beanStructure.findColumnName(func);
+        SqlField field = new NameSqlField(columnName);
         SqlField v = new VariableSqlField(String.class, val);
 
         return like(field, new ConcatMethodSqlField(v, 1, new CharSqlField("%")));
@@ -1497,8 +1527,8 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> like(Function<T, ?> func, SqlField val) {
-        String fieldName = beanStructure.findColumnName(func);
-        SqlField field = new NameSqlField(fieldName);
+        String columnName = beanStructure.findColumnName(func);
+        SqlField field = new NameSqlField(columnName);
 
         return like(field, val);
     }
@@ -1536,8 +1566,8 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
     public FastormSqlBuilder<T> groupBy(FuncCollection<T> collection) {
         SqlFieldCollection fieldCollection = new SqlFieldCollection(collection.size());
         for (Function<T, ?> function : collection) {
-            String fieldName = beanStructure.findColumnName(function);
-            fieldCollection.add(new NameSqlField(fieldName));
+            String columnName = beanStructure.findColumnName(function);
+            fieldCollection.add(new NameSqlField(columnName));
         }
 
         return groupBy(fieldCollection);
@@ -1581,8 +1611,8 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> orderBy(Function<T, ?> func, SqlOrderType type) {
-        String fieldName = beanStructure.findColumnName(func);
-        SqlField field = new NameSqlField(fieldName);
+        String columnName = beanStructure.findColumnName(func);
+        SqlField field = new NameSqlField(columnName);
 
         return orderBy(new StandardSqlSqlOrder(field, type));
     }
@@ -1645,24 +1675,17 @@ public abstract class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
     }
 
     /**
-     * 获取列名称，顺便检查一下数据类型是否匹配
-     * @param func
+     * 检查数据类型是否匹配
+     * @param type
      * @param list
-     * @param <F>
      * @return
      */
-    private <F> String findAndCheckColumnName(Function<T, F> func, List<Object> list) {
-        String name = beanStructure.findColumnName(func);
-        String fieldName = beanStructure.findFieldName(func);
-        Field field = beanStructure.getFieldMap().get(fieldName);
-
+    private void checkTypes(Class<?> type, List<Object> list) {
         for (Object obj : list) {
-            if (!field.getType().equals(obj.getClass())) {
-                throw new FastormSqlException(String.format("参数类型不一致，%s != %s", field.getType().getName(), obj.getClass().getName()));
+            if (!type.equals(obj.getClass())) {
+                throw new FastormSqlException(String.format("参数类型不一致，%s != %s", type.getName(), obj.getClass().getName()));
             }
         }
-
-        return name;
     }
 
     @Override

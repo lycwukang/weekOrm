@@ -4,7 +4,7 @@ import com.wuk.fastorm.bean.DefaultFastormBeanAnalyze;
 import com.wuk.fastorm.bean.FastormBeanStructure;
 import com.wuk.fastorm.exception.FastormSqlException;
 import com.wuk.fastorm.sql.impl.*;
-import com.wuk.fastorm.sql.impl.SimpleSqlBuilder2;
+import com.wuk.fastorm.sql.impl.SimpleSqlInternalBuilder;
 
 import java.sql.Connection;
 
@@ -43,14 +43,14 @@ public class FastormSession implements AutoCloseable {
     public <T> FastormSqlBuilder<T> build(Class<T> clazz) {
         FastormBeanStructure<T> beanStructure = new DefaultFastormBeanAnalyze().analyze(clazz);
         FastormSqlSessionExecutor<T> sqlSessionExecutor = new FastormSqlSessionExecutor<>(connection, beanStructure);
-        FastormSqlBuilder2<T> sqlBuilder = FastormSqlBuilder2.instance(beanStructure, sqlSessionExecutor);
+        FastormSqlInternalBuilder<T> sqlBuilder = FastormSqlInternalBuilder.instance(beanStructure, sqlSessionExecutor);
         sqlSessionExecutor.setSqlBuilder(sqlBuilder);
         return sqlBuilder;
     }
 
     public SimpleSqlBuilder build(String sql) {
         SimpleSqlSessionExecutor sqlExecutor = new SimpleSqlSessionExecutor(connection);
-        SimpleSqlBuilder2 sqlBuilder = SimpleSqlBuilder2.instance(sql, sqlExecutor);
+        SimpleSqlInternalBuilder sqlBuilder = SimpleSqlInternalBuilder.instance(sql, sqlExecutor);
         sqlExecutor.setSqlBuilder(sqlBuilder);
         return sqlBuilder;
     }

@@ -2,7 +2,7 @@ package com.wuk.fastorm.sql.impl;
 
 import java.util.List;
 
-public abstract class SimpleSqlBuilder implements SimpleSqlExecutor {
+public class SimpleSqlBuilder implements SimpleSqlExecutor {
 
     /**
      * 静态sql

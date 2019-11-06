@@ -19,7 +19,7 @@ public class SimpleSqlSessionExecutor extends AbstractSqlSessionExecutor impleme
         this.connection = connection;
     }
 
-    public void setSqlBuilder(SimpleSqlBuilder2 sqlBuilder) {
+    public void setSqlBuilder(SimpleSqlInternalBuilder sqlBuilder) {
         setSqlCreater(sqlBuilder);
     }
 

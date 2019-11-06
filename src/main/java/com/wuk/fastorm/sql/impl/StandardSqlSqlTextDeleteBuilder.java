@@ -26,12 +26,9 @@ public class StandardSqlSqlTextDeleteBuilder implements StandardSqlSqlTextBuilde
         }
         builder.append(String.format("`%s`", sql.getTable()));
 
-        builder.append("WHERE ");
+        builder.append(" WHERE");
         for (int i = 0; i < sql.getWhereList().size(); i++) {
-            if (i > 0) {
-                builder.append(" ");
-            }
-            builder.append(sql.getWhereList().get(i).getSql());
+            builder.append(String.format(" %s", sql.getWhereList().get(i).getSql()));
         }
 
         return builder.toString();

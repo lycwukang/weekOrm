@@ -8,7 +8,7 @@ import com.wuk.fastorm.sql.SqlCreater;
  * 增加SqlCreater接口
  * @param <T>
  */
-public class FastormSqlBuilder2<T> extends FastormSqlBuilder<T> implements SqlCreater {
+public class FastormSqlInternalBuilder<T> extends FastormSqlBuilder<T> implements SqlCreater {
 
     /**
      * 初始化新实例
@@ -17,8 +17,8 @@ public class FastormSqlBuilder2<T> extends FastormSqlBuilder<T> implements SqlCr
      * @param <T>
      * @return
      */
-    public static <T> FastormSqlBuilder2<T> instance(FastormBeanStructure<T> beanStructure, FastormSqlExecutor<T> sqlExecutor) {
-        FastormSqlBuilder2<T> sqlBuilder = new FastormSqlBuilder2<>();
+    public static <T> FastormSqlInternalBuilder<T> instance(FastormBeanStructure<T> beanStructure, FastormSqlExecutor<T> sqlExecutor) {
+        FastormSqlInternalBuilder<T> sqlBuilder = new FastormSqlInternalBuilder<>();
         sqlBuilder.beanStructure = beanStructure;
         sqlBuilder.sql = new StandardSql();
         sqlBuilder.sql.setSchema(sqlBuilder.beanStructure.getTable().schema());

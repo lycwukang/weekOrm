@@ -15,14 +15,14 @@ public class FastormSqlSessionExecutor<T> extends AbstractSqlSessionExecutor imp
     private static final Logger logger = LoggerFactory.getLogger(FastormSqlSessionExecutor.class);
 
     private FastormBeanStructure<T> beanStructure;
-    private FastormSqlBuilder2<T> sqlBuilder;
+    private FastormSqlInternalBuilder<T> sqlBuilder;
 
     public FastormSqlSessionExecutor(Connection connection, FastormBeanStructure<T> beanStructure) {
         super(connection);
         this.beanStructure = beanStructure;
     }
 
-    public void setSqlBuilder(FastormSqlBuilder2<T> sqlBuilder) {
+    public void setSqlBuilder(FastormSqlInternalBuilder<T> sqlBuilder) {
         this.sqlBuilder = sqlBuilder;
         setSqlCreater(sqlBuilder);
     }
