@@ -256,6 +256,16 @@ public class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param val
      * @return
      */
+    public FastormSqlBuilder<T> set(Function<T, BigDecimal> func, BigDecimal val) {
+        return set(func, (Object) val);
+    }
+
+    /**
+     * set #{func} = #{val}
+     * @param func
+     * @param val
+     * @return
+     */
     public FastormSqlBuilder<T> set(Function<T, Boolean> func, Boolean val) {
         return set(func, (Object) val);
     }
