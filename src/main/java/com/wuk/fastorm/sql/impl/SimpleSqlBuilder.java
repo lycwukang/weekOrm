@@ -26,13 +26,13 @@ public class SimpleSqlBuilder implements SimpleSqlExecutor {
     }
 
     @Override
-    public int update() {
-        return sqlExecutor.update();
+    public int exec() {
+        return sqlExecutor.exec();
     }
 
     @Override
-    public int update(SimpleGeneratedKey generatedKey) {
-        return sqlExecutor.update(generatedKey);
+    public int exec(SimpleGeneratedKey generatedKey) {
+        return sqlExecutor.exec(generatedKey);
     }
 
     @Override

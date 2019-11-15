@@ -29,12 +29,12 @@ public class SimpleSqlSessionExecutor extends AbstractSqlSessionExecutor impleme
     }
 
     @Override
-    public int update() {
+    public int exec() {
         return doUpdate();
     }
 
     @Override
-    public int update(SimpleGeneratedKey generatedKey) {
+    public int exec(SimpleGeneratedKey generatedKey) {
         return doUpdate(generatedKey);
     }
 

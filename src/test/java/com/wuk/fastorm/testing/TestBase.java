@@ -15,7 +15,7 @@ public abstract class TestBase {
         String sql = IOUtils.toString(is, Charset.forName("utf-8"));
         for (String s : sql.split(";")) {
             if (StringUtils.isNotEmpty(s)) {
-                fastorm.build(s).update();
+                fastorm.build(s).exec();
             }
         }
     }

@@ -8,14 +8,14 @@ public interface SimpleSqlExecutor {
      * 执行更新
      * @return
      */
-    int update();
+    int exec();
 
     /**
      * 执行更新，获取自增长主键
      * @param generatedKey
      * @return
      */
-    int update(SimpleGeneratedKey generatedKey);
+    int exec(SimpleGeneratedKey generatedKey);
 
     /**
      * 读取一条数据
