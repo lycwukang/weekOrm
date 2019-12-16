@@ -1,4 +1,4 @@
-# weekOrm
+# fastorm（原名weekOrm）
 专注与单表操作的orm框架
 
 简单使用指南，详细参见测试类
@@ -13,84 +13,40 @@
     <property name="password" value="?" />
 </bean>
 
-<!-- weekOrm所使用的数据源，name是该数据源的名称 -->
-<bean id="weekSource" class="wuk.week.orm.WeekSource">
-    <property name="name" value="test" />
-    <property name="dataSource" ref="dataSource" />
-</bean>
-
 <!-- 核心类 -->
-<bean class="wuk.week.orm.WeekManager">
-    <property name="dataSources">
-        <list>
-            <ref bean="weekSource" />
-        </list>
-    </property>
+<bean id="fastorm" class="com.wuk.fastorm.Fastorm">
+    <property name="dataSource" ref="dataSource" />
 </bean>
 ```
 ------
 
 2. orm实体定义
 ```java
-@WeekTable("test_member")
+@FastormTable("test_member")
 public class MemberDTO {
-
-    public static final Field _id = WeekUtils.field(MemberDTO.class, "id");
-    public static final Field _createDate = WeekUtils.field(MemberDTO.class, "createDate");
-    public static final Field _username = WeekUtils.field(MemberDTO.class, "username");
-    public static final Field _phone = WeekUtils.field(MemberDTO.class, "phone");
-    public static final Field _amount = WeekUtils.field(MemberDTO.class, "amount");
-
-    @WeekColumn(value = "id", autoIncrement = true, primaryKey = true)
+    
+    @FastormColumn(value = "id", autoIncrement = true)
     private Long id;
-    @WeekColumn("create_date")
+    @FastormColumn(value = "create_date")
     private Date createDate;
-    @WeekColumn("username")
+    @FastormColumn(value = "modify_date")
+    private Date modifyDate;
+    @FastormColumn(value = "username")
     private String username;
-    @WeekColumn("phone")
+    @FastormColumn(value = "phone")
     private String phone;
-    @WeekColumn("amount")
+    @FastormColumn(value = "amount")
     private BigDecimal amount;
+    @FastormColumn(value = "age")
+    private Integer age;
+    @FastormColumn(value = "height")
+    private Float height;
+    @FastormColumn(value = "weight")
+    private Double weight;
+    @FastormColumn(value = "enable")
+    private Boolean enable;
 
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public Date getCreateDate() {
-        return createDate;
-    }
-
-    public void setCreateDate(Date createDate) {
-        this.createDate = createDate;
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public String getPhone() {
-        return phone;
-    }
-
-    public void setPhone(String phone) {
-        this.phone = phone;
-    }
-
-    public BigDecimal getAmount() {
-        return amount;
-    }
-
-    public void setAmount(BigDecimal amount) {
-        this.amount = amount;
-    }
+    // ...省略get,set方法
 }
 ```
 ------
@@ -105,28 +61,28 @@ member.setUsername("username");
 member.setPhone("13585731574");
 member.setAmount(BigDecimal.ZERO);
 
-WeekGeneratedKey generatedKey = new WeekGeneratedKey();
-weekManager.build("test", MemberDTO.class)
-        .insert()
-        .exec(member, generatedKey);
+FastormGeneratedKey<MemberDTO> generatedKey = new FastormGeneratedKey<>(MemberDTO::getId);
+fastorm.build(MemberDTO.class)
+        .insert(member)
+        .exec(generatedKey);
 
-System.out.println("id=" + generatedKey.getLong());
+System.out.println("id=" + member.getId());
 
 // select
 // select id, create_date, username, phone, amount from test_member where id=?
-member = weekManager.build("test", MemberDTO.class)
+member = fastorm.build(MemberDTO.class)
         .select()
-        .where().eq(MemberDTO._id, generatedKey.getLong())
+        .where().eq(MemberDTO::getId, member.getId())
         .read();
 
 System.out.println("id=" + member.getId() + ", username=" + member.getUsername() + ", phone=" + member.getPhone() + ", amount=" + member.getAmount() + ", createDate=" + member.getCreateDate());
 
 // update
 // update test_member set amount=? where id=?
-weekManager.build("test", MemberDTO.class)
+fastorm.build(MemberDTO.class)
         .update()
-        .where().eq(MemberDTO._id, generatedKey.getLong())
-        .set(MemberDTO._amount, new BigDecimal("100"))
+        .where().eq(MemberDTO::getId, member.getId())
+        .set(MemberDTO::getAmount, new BigDecimal("100"))
         .exec();
 
 // select2
@@ -135,11 +91,11 @@ weekManager.build("test", MemberDTO.class)
 // order by amount desc
 // limit 1
 // 只返回指定的列
-member = weekManager.build("test", MemberDTO.class)
-        .select(MemberDTO._username, MemberDTO._phone, MemberDTO._amount)
-        .where().gtEq(MemberDTO._amount, new BigDecimal("100"))
-        .orderBy(MemberDTO._amount, OrderType.desc)
-        .groupBy(MemberDTO._username)
+member = fastorm.build(MemberDTO.class)
+        .select(FuncCollection.newInstance(MemberDTO::getUsername, MemberDTO::getPhone, MemberDTO::getAmount))
+        .where().gtEq(MemberDTO::getAmount, new BigDecimal("100"))
+        .orderBy(MemberDTO::getAmount, SqlOrderType.DESC)
+        .groupBy(MemberDTO::getUsername)
         .limit(1)
         .read();
 
@@ -147,9 +103,18 @@ System.out.println("id=" + member.getId() + ", username=" + member.getUsername()
 
 // delete
 // delete from test_member where id=?
-weekManager.build("test", MemberDTO.class)
+fastorm.build(MemberDTO.class)
         .delete()
-        .where().eq(MemberDTO._id, generatedKey.getLong())
+        .where().eq(MemberDTO::getId, member.getId())
         .exec();
 ```
 ----
+
+支持使用sql原型调用
+======
+1. 执行sql
+```java
+MemberDTO member = fastorm.build("select * from test_member where id=#{id} limit 1")
+                .addParam("id", 1L)
+                .read(MemberDTO.class);
+```

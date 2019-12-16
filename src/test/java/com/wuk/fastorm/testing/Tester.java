@@ -6,6 +6,7 @@ import com.wuk.fastorm.sql.collection.FuncCollection;
 import com.wuk.fastorm.sql.field.CountMethodSqlField;
 import com.wuk.fastorm.sql.field.NumberSqlField;
 import com.wuk.fastorm.sql.field.StaticSqlField;
+import com.wuk.fastorm.sql.impl.FastormGeneratedKey;
 import com.wuk.fastorm.testing.dto.MemberDTO;
 import org.apache.commons.lang3.time.DateFormatUtils;
 import org.junit.Assert;
