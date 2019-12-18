@@ -4,9 +4,12 @@ import com.wuk.fastorm.bean.FastormBeanStructure;
 import com.wuk.fastorm.exception.FastormException;
 import com.wuk.fastorm.exception.FastormSqlException;
 import com.wuk.fastorm.sql.*;
+import com.wuk.fastorm.sql.collection.FuncCollection;
+import com.wuk.fastorm.sql.collection.SqlFieldCollection;
+import com.wuk.fastorm.sql.collection.SqlOrderCollection;
+import com.wuk.fastorm.sql.collection.TCollection;
 import com.wuk.fastorm.sql.expression.*;
 import com.wuk.fastorm.sql.field.*;
-import com.wuk.fastorm.sql.collection.*;
 
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
@@ -1159,9 +1162,7 @@ public class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> in(Function<T, ?> func, Integer... list) {
-        ObjCollection collection = new ObjCollection(list.length);
-        Collections.addAll(collection, list);
-        return in(func, collection);
+        return in(func, TCollection.newInstance(list));
     }
 
     /**
@@ -1171,9 +1172,7 @@ public class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> in(Function<T, ?> func, Long... list) {
-        ObjCollection collection = new ObjCollection(list.length);
-        Collections.addAll(collection, list);
-        return in(func, collection);
+        return in(func, TCollection.newInstance(list));
     }
 
     /**
@@ -1183,9 +1182,7 @@ public class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> in(Function<T, ?> func, Float... list) {
-        ObjCollection collection = new ObjCollection(list.length);
-        Collections.addAll(collection, list);
-        return in(func, collection);
+        return in(func, TCollection.newInstance(list));
     }
 
     /**
@@ -1195,9 +1192,7 @@ public class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> in(Function<T, ?> func, Double... list) {
-        ObjCollection collection = new ObjCollection(list.length);
-        Collections.addAll(collection, list);
-        return in(func, collection);
+        return in(func, TCollection.newInstance(list));
     }
 
     /**
@@ -1207,9 +1202,7 @@ public class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> in(Function<T, ?> func, Boolean... list) {
-        ObjCollection collection = new ObjCollection(list.length);
-        Collections.addAll(collection, list);
-        return in(func, collection);
+        return in(func, TCollection.newInstance(list));
     }
 
     /**
@@ -1219,9 +1212,7 @@ public class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> in(Function<T, ?> func, String... list) {
-        ObjCollection collection = new ObjCollection(list.length);
-        Collections.addAll(collection, list);
-        return in(func, collection);
+        return in(func, TCollection.newInstance(list));
     }
 
     /**
@@ -1231,9 +1222,7 @@ public class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> in(Function<T, ?> func, BigDecimal... list) {
-        ObjCollection collection = new ObjCollection(list.length);
-        Collections.addAll(collection, list);
-        return in(func, collection);
+        return in(func, TCollection.newInstance(list));
     }
 
     /**
@@ -1243,9 +1232,7 @@ public class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> in(Function<T, ?> func, Date... list) {
-        ObjCollection collection = new ObjCollection(list.length);
-        Collections.addAll(collection, list);
-        return in(func, collection);
+        return in(func, TCollection.newInstance(list));
     }
 
     /**
@@ -1254,7 +1241,7 @@ public class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param collection
      * @return
      */
-    public FastormSqlBuilder<T> in(Function<T, ?> func, ObjCollection collection) {
+    public FastormSqlBuilder<T> in(Function<T, ?> func, TCollection<?> collection) {
         String fieldName = beanStructure.findFieldName(func);
         String columnName = beanStructure.findColumnName(fieldName);
         Class<?> clazz = beanStructure.getReadMethodMap().get(fieldName).getReturnType();
@@ -1327,9 +1314,7 @@ public class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> notIn(Function<T, ?> func, Integer... list) {
-        ObjCollection collection = new ObjCollection(list.length);
-        Collections.addAll(collection, list);
-        return notIn(func, collection);
+        return notIn(func, TCollection.newInstance(list));
     }
 
     /**
@@ -1339,9 +1324,7 @@ public class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> notIn(Function<T, ?> func, Long... list) {
-        ObjCollection collection = new ObjCollection(list.length);
-        Collections.addAll(collection, list);
-        return notIn(func, collection);
+        return notIn(func, TCollection.newInstance(list));
     }
 
     /**
@@ -1351,9 +1334,7 @@ public class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> notIn(Function<T, ?> func, Float... list) {
-        ObjCollection collection = new ObjCollection(list.length);
-        Collections.addAll(collection, list);
-        return notIn(func, collection);
+        return notIn(func, TCollection.newInstance(list));
     }
 
     /**
@@ -1363,9 +1344,7 @@ public class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> notIn(Function<T, ?> func, Double... list) {
-        ObjCollection collection = new ObjCollection(list.length);
-        Collections.addAll(collection, list);
-        return notIn(func, collection);
+        return notIn(func, TCollection.newInstance(list));
     }
 
     /**
@@ -1375,9 +1354,7 @@ public class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> notIn(Function<T, ?> func, Boolean... list) {
-        ObjCollection collection = new ObjCollection(list.length);
-        Collections.addAll(collection, list);
-        return notIn(func, collection);
+        return notIn(func, TCollection.newInstance(list));
     }
 
     /**
@@ -1387,9 +1364,7 @@ public class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> notIn(Function<T, ?> func, String... list) {
-        ObjCollection collection = new ObjCollection(list.length);
-        Collections.addAll(collection, list);
-        return notIn(func, collection);
+        return notIn(func, TCollection.newInstance(list));
     }
 
     /**
@@ -1399,9 +1374,7 @@ public class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> notIn(Function<T, ?> func, BigDecimal... list) {
-        ObjCollection collection = new ObjCollection(list.length);
-        Collections.addAll(collection, list);
-        return notIn(func, collection);
+        return notIn(func, TCollection.newInstance(list));
     }
 
     /**
@@ -1411,9 +1384,7 @@ public class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> notIn(Function<T, ?> func, Date... list) {
-        ObjCollection collection = new ObjCollection(list.length);
-        Collections.addAll(collection, list);
-        return notIn(func, collection);
+        return notIn(func, TCollection.newInstance(list));
     }
 
     /**
@@ -1422,7 +1393,7 @@ public class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param collection
      * @return
      */
-    public FastormSqlBuilder<T> notIn(Function<T, ?> func, ObjCollection collection) {
+    public FastormSqlBuilder<T> notIn(Function<T, ?> func, TCollection<?> collection) {
         String fieldName = beanStructure.findFieldName(func);
         String columnName = beanStructure.findColumnName(fieldName);
         Class<?> clazz = beanStructure.getReadMethodMap().get(fieldName).getReturnType();
@@ -1563,9 +1534,7 @@ public class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> groupBy(Function<T, ?>... fields) {
-        FuncCollection<T> collection = new FuncCollection<>(fields.length);
-        Collections.addAll(collection, fields);
-        return groupBy(collection);
+        return groupBy(FuncCollection.newInstance(fields));
     }
 
     /**
@@ -1633,10 +1602,7 @@ public class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @return
      */
     public FastormSqlBuilder<T> orderBy(SqlOrder... orders) {
-        SqlOrderCollection collection = new SqlOrderCollection(orders.length);
-        Collections.addAll(collection, orders);
-
-        return orderBy(collection);
+        return orderBy(SqlOrderCollection.newInstance(orders));
     }
 
     /**
@@ -1690,7 +1656,7 @@ public class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
      * @param list
      * @return
      */
-    private void checkTypes(Class<?> type, List<Object> list) {
+    private void checkTypes(Class<?> type, List<?> list) {
         for (Object obj : list) {
             if (obj != null && !type.equals(obj.getClass())) {
                 throw new FastormSqlException(String.format("参数类型不一致，%s != %s", type.getName(), obj.getClass().getName()));

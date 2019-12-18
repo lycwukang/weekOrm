@@ -14,6 +14,7 @@ public class FuncCollection<T> extends ArrayList<Function<T, ?>> {
         super(size);
     }
 
+    @SafeVarargs
     public static <T> FuncCollection<T> newInstance(Function<T, ?>... functions) {
         FuncCollection<T> funcCollection = new FuncCollection<>();
         Collections.addAll(funcCollection, functions);

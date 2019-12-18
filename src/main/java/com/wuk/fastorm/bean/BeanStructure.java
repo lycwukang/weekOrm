@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.*;
 
 /**
@@ -207,6 +208,10 @@ public class BeanStructure<T> {
         Object obj = resultSet.getObject(columnName);
         if (obj == null) {
             return null;
+        }
+
+        if (obj instanceof Timestamp) {
+            return new Date(resultSet.getTimestamp(columnName).getTime());
         }
         return resultSet.getDate(columnName);
     }
