@@ -18,7 +18,7 @@ public class StandardSqlSqlSet implements SqlSet {
 
     @Override
     public String getSql() {
-        return String.format("%s = %s", name, field.getSql());
+        return String.format("`%s` = %s", name, field.getSql());
     }
 
     @Override
