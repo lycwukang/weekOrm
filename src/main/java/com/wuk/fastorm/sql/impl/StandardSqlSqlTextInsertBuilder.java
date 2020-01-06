@@ -56,6 +56,18 @@ public class StandardSqlSqlTextInsertBuilder implements StandardSqlSqlTextBuilde
             builder.append(")");
         }
 
+        if (sql.isOnDuplicateKeyUpdate()) {
+            builder.append(" ON DUPLICATE KEY UPDATE ");
+
+            for (int j = 0; j < sql.getSetList().size(); j++) {
+                SqlSet set = sql.getSetList().get(j);
+                if (j > 0) {
+                    builder.append(", ");
+                }
+                builder.append(set.getSql());
+            }
+        }
+
         return builder.toString();
     }
 
@@ -63,12 +75,12 @@ public class StandardSqlSqlTextInsertBuilder implements StandardSqlSqlTextBuilde
     public List<SqlParam> findParams(StandardSql sql) {
         List<SqlParam> params = new ArrayList<>(6);
 
-        for (SqlSet sqlSet : sql.getSetList()) {
-            params.addAll(sqlSet.getParams());
-        }
-
         for (List<SqlParam> sqlParams : sql.getInsertDataList()) {
             params.addAll(sqlParams);
+        }
+
+        for (SqlSet sqlSet : sql.getSetList()) {
+            params.addAll(sqlSet.getParams());
         }
 
         return params;
