@@ -34,6 +34,33 @@ public class Fastorm {
     }
 
     /**
+     * 构建FastormSqlBuilder，当FastormSession不为空时，使用FastormSession
+     * @param clazz
+     * @param <T>
+     * @return
+     */
+    public <T> FastormSqlBuilder<T> tryBuild(FastormSession session, Class<T> clazz) {
+        if (session == null) {
+            return build(clazz);
+        } else {
+            return session.build(clazz);
+        }
+    }
+
+    /**
+     * 构建SimpleSqlBuilder，当FastormSession不为空时，使用FastormSession
+     * @param sql
+     * @return
+     */
+    public SimpleSqlBuilder tryBuild(FastormSession session, String sql) {
+        if (session == null) {
+            return build(sql);
+        } else {
+            return session.build(sql);
+        }
+    }
+
+    /**
      * 返回session对象，并设置成不自动提交（开启事务模式）
      * @return
      */
