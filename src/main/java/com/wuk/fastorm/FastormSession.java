@@ -11,6 +11,8 @@ import java.sql.Connection;
 public class FastormSession implements AutoCloseable {
 
     private Connection connection;
+    private boolean isCommit = false;
+    private boolean isRollback = false;
 
     public FastormSession(Connection connection) {
         this.connection = connection;
@@ -30,6 +32,7 @@ public class FastormSession implements AutoCloseable {
         } catch (Exception e) {
             throw new FastormSqlException("提交事务出错", e);
         }
+        isCommit = true;
     }
 
     public void rollback() {
@@ -38,6 +41,7 @@ public class FastormSession implements AutoCloseable {
         } catch (Exception e) {
             throw new FastormSqlException("回滚事务出错", e);
         }
+        isRollback = true;
     }
 
     public <T> FastormSqlBuilder<T> build(Class<T> clazz) {
@@ -57,12 +61,20 @@ public class FastormSession implements AutoCloseable {
 
     @Override
     public void close() throws Exception {
+        if (!isCommit && !isRollback) {
+            try {
+                connection.rollback();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
         try {
             if (!connection.isClosed()) {
                 connection.close();
             }
         } catch (Exception e) {
-            throw new FastormSqlException("自动关闭数据库链接出错", e);
+            e.printStackTrace();
         }
     }
 }
