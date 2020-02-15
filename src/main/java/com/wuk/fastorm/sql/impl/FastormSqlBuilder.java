@@ -1,5 +1,6 @@
 package com.wuk.fastorm.sql.impl;
 
+import com.wuk.fastorm.bean.FastormBeanLastOperateStructure;
 import com.wuk.fastorm.bean.FastormBeanStructure;
 import com.wuk.fastorm.exception.FastormException;
 import com.wuk.fastorm.exception.FastormSqlException;
@@ -27,7 +28,7 @@ public class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
     /**
      * class的BeanStructure实例
      */
-    protected FastormBeanStructure<T> beanStructure;
+    protected FastormBeanLastOperateStructure<T> beanStructure;
 
     /**
      * 动态sql实例

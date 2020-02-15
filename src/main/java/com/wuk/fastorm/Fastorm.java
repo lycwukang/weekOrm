@@ -1,5 +1,7 @@
 package com.wuk.fastorm;
 
+import com.wuk.fastorm.data.ConnectionFindImpl;
+import com.wuk.fastorm.data.ConnectionFindSource;
 import com.wuk.fastorm.exception.FastormSqlException;
 import com.wuk.fastorm.sql.impl.FastormSqlBuilder;
 import com.wuk.fastorm.sql.impl.SimpleSqlBuilder;
@@ -21,7 +23,7 @@ public class Fastorm {
      * @return
      */
     public <T> FastormSqlBuilder<T> build(Class<T> clazz) {
-        return new FastormSession(getConnection()).build(clazz);
+        return new FastormSession(new ConnectionFindSource(dataSource)).build(clazz);
     }
 
     /**
@@ -30,7 +32,7 @@ public class Fastorm {
      * @return
      */
     public SimpleSqlBuilder build(String sql) {
-        return new FastormSession(getConnection()).build(sql);
+        return new FastormSession(new ConnectionFindSource(dataSource)).build(sql);
     }
 
     /**
@@ -65,7 +67,7 @@ public class Fastorm {
      * @return
      */
     public FastormSession begin() {
-        FastormSession session = new FastormSession(getConnection());
+        FastormSession session = new FastormSession(new ConnectionFindImpl(getConnection()));
         session.setAutoCommit(false);
         return session;
     }

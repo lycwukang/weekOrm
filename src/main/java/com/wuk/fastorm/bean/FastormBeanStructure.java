@@ -16,8 +16,6 @@ public class FastormBeanStructure<T> extends BeanStructure<T> {
 
     private FastormTable table;
     private Map<String, FastormColumn> columnMap;
-    private T instance;
-    private LastOperateFeature instanceLastOperateFeature;
 
     public FastormBeanStructure(BeanStructure<T> beanStructure) {
         setClazz(beanStructure.getClazz());
@@ -25,9 +23,6 @@ public class FastormBeanStructure<T> extends BeanStructure<T> {
         setFieldMap(beanStructure.getFieldMap());
         setReadMethodMap(beanStructure.getReadMethodMap());
         setWriteMethodMap(beanStructure.getWriteMethodMap());
-
-        instance = new DefaultLastOperateFeatureFactory().instance(beanStructure);
-        instanceLastOperateFeature = (LastOperateFeature) instance;
     }
 
     public FastormTable getTable() {
@@ -44,26 +39,6 @@ public class FastormBeanStructure<T> extends BeanStructure<T> {
 
     public void setColumnMap(Map<String, FastormColumn> columnMap) {
         this.columnMap = columnMap;
-    }
-
-    /**
-     * 获取列名称
-     * @param function
-     * @return
-     */
-    public String findFieldName(Function<T, ?> function) {
-        function.apply(instance);
-
-        return instanceLastOperateFeature.findLastOperateFieldName();
-    }
-
-    /**
-     * 获取列名称
-     * @param function
-     * @return
-     */
-    public String findColumnName(Function<T, ?> function) {
-        return findColumnName(findFieldName(function));
     }
 
     /**

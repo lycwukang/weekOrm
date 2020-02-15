@@ -1,8 +1,8 @@
 package com.wuk.fastorm.sql;
 
+import com.wuk.fastorm.data.ConnectionFind;
 import com.wuk.fastorm.sql.impl.SimpleGeneratedKey;
 
-import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
@@ -11,7 +11,7 @@ import java.sql.SQLException;
  */
 public class AutoCloseableExecutor extends Executor implements AutoCloseable {
 
-    public AutoCloseableExecutor(Connection connection, Sql sql) {
+    public AutoCloseableExecutor(ConnectionFind connection, Sql sql) {
         super(connection, sql);
     }
 
@@ -32,7 +32,8 @@ public class AutoCloseableExecutor extends Executor implements AutoCloseable {
 
     @Override
     public void close() throws Exception {
-        if (connection.getAutoCommit() && !connection.isClosed()) {
+        if (connection.getAutoCommit()) {
+            // 自动提交事务的模式时关闭链接
             connection.close();
         }
     }
