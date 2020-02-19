@@ -1631,11 +1631,11 @@ public class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
 
     /**
      * limit #{index}
-     * @param index
+     * @param length
      * @return
      */
-    public FastormSqlBuilder<T> limit(int index) {
-        return limit(index, 0);
+    public FastormSqlBuilder<T> limit(int length) {
+        return limit(0, length);
     }
 
     /**

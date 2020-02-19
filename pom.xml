@@ -6,7 +6,7 @@
 
     <groupId>com.wuk</groupId>
     <artifactId>fastorm</artifactId>
-    <version>1.0.9</version>
+    <version>1.0.10</version>
     <packaging>jar</packaging>
 
     <name>fastorm</name>
@@ -20,6 +20,17 @@
             <distribution>repo</distribution>
         </license>
     </licenses>
+
+    <distributionManagement>
+        <repository>
+            <id>aliyun-tb-rdc-releases</id>
+            <url>https://repo.rdc.aliyun.com/repository/114640-release-oFMu66/</url>
+        </repository>
+        <snapshotRepository>
+            <id>aliyun-tb-rdc-snapshots</id>
+            <url>https://repo.rdc.aliyun.com/repository/114640-snapshot-Uv4mCS/</url>
+        </snapshotRepository>
+    </distributionManagement>
 
     <developers>
         <developer>
