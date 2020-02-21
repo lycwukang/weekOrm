@@ -1003,7 +1003,7 @@ public class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
 
         checkTypes(clazz, Collections.singletonList(val));
 
-        return gt(new NameSqlField(fieldName), new VariableSqlField(clazz, val));
+        return gt(new NameSqlField(columnName), new VariableSqlField(clazz, val));
     }
 
     /**
