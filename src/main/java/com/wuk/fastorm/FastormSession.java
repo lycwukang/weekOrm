@@ -9,9 +9,11 @@ import com.wuk.fastorm.sql.impl.SimpleSqlInternalBuilder;
 public class FastormSession implements AutoCloseable {
 
     private ConnectionFind find;
+    private Fastorm fastorm;
 
-    public FastormSession(ConnectionFind find) {
+    public FastormSession(ConnectionFind find, Fastorm fastorm) {
         this.find = find;
+        this.fastorm = fastorm;
     }
 
     public void setAutoCommit(boolean autoCommit) {
@@ -43,6 +45,12 @@ public class FastormSession implements AutoCloseable {
 
     @Override
     public void close() throws Exception {
+        try {
+            fastorm.localSession.remove();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
         find.close();
     }
 }
