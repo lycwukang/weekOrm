@@ -1587,6 +1587,15 @@ public class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
     /**
      * order by #{field}...
      * @param func
+     * @return
+     */
+    public FastormSqlBuilder<T> orderBy(Function<T, ?> func, boolean desc) {
+        return orderBy(func, desc ? SqlOrderType.DESC : SqlOrderType.ASC);
+    }
+
+    /**
+     * order by #{field}...
+     * @param func
      * @param type
      * @return
      */
