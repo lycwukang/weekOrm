@@ -1,6 +1,6 @@
 package com.wuk.fastorm.sql.impl;
 
-import com.wuk.fastorm.bean.FastormBeanStructure;
+import com.wuk.fastorm.bean.FastormBeanLastOperateStructure;
 import com.wuk.fastorm.sql.Sql;
 import com.wuk.fastorm.sql.SqlCreater;
 
@@ -17,7 +17,7 @@ public class FastormSqlInternalBuilder<T> extends FastormSqlBuilder<T> implement
      * @param <T>
      * @return
      */
-    public static <T> FastormSqlInternalBuilder<T> instance(FastormBeanStructure<T> beanStructure, FastormSqlExecutor<T> sqlExecutor) {
+    public static <T> FastormSqlInternalBuilder<T> instance(FastormBeanLastOperateStructure<T> beanStructure, FastormSqlExecutor<T> sqlExecutor) {
         FastormSqlInternalBuilder<T> sqlBuilder = new FastormSqlInternalBuilder<>();
         sqlBuilder.beanStructure = beanStructure;
         sqlBuilder.sql = new StandardSql();

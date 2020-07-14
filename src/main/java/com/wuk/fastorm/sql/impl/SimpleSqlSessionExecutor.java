@@ -1,22 +1,19 @@
 package com.wuk.fastorm.sql.impl;
 
 import com.wuk.fastorm.bean.BeanStructure;
+import com.wuk.fastorm.data.ConnectionFind;
 import com.wuk.fastorm.exception.FastormSqlException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.Connection;
 import java.util.List;
 
 public class SimpleSqlSessionExecutor extends AbstractSqlSessionExecutor implements SimpleSqlExecutor {
 
     private static final Logger logger = LoggerFactory.getLogger(SimpleSqlSessionExecutor.class);
 
-    private Connection connection;
-
-    public SimpleSqlSessionExecutor(Connection connection) {
+    public SimpleSqlSessionExecutor(ConnectionFind connection) {
         super(connection);
-        this.connection = connection;
     }
 
     public void setSqlBuilder(SimpleSqlInternalBuilder sqlBuilder) {

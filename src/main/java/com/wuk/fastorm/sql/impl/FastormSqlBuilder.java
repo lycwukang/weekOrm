@@ -1,5 +1,6 @@
 package com.wuk.fastorm.sql.impl;
 
+import com.wuk.fastorm.bean.FastormBeanLastOperateStructure;
 import com.wuk.fastorm.bean.FastormBeanStructure;
 import com.wuk.fastorm.exception.FastormException;
 import com.wuk.fastorm.exception.FastormSqlException;
@@ -27,7 +28,7 @@ public class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
     /**
      * class的BeanStructure实例
      */
-    protected FastormBeanStructure<T> beanStructure;
+    protected FastormBeanLastOperateStructure<T> beanStructure;
 
     /**
      * 动态sql实例
@@ -1002,7 +1003,7 @@ public class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
 
         checkTypes(clazz, Collections.singletonList(val));
 
-        return gt(new NameSqlField(fieldName), new VariableSqlField(clazz, val));
+        return gt(new NameSqlField(columnName), new VariableSqlField(clazz, val));
     }
 
     /**
@@ -1586,6 +1587,15 @@ public class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
     /**
      * order by #{field}...
      * @param func
+     * @return
+     */
+    public FastormSqlBuilder<T> orderBy(Function<T, ?> func, boolean desc) {
+        return orderBy(func, desc ? SqlOrderType.DESC : SqlOrderType.ASC);
+    }
+
+    /**
+     * order by #{field}...
+     * @param func
      * @param type
      * @return
      */
@@ -1630,11 +1640,11 @@ public class FastormSqlBuilder<T> implements FastormSqlExecutor<T> {
 
     /**
      * limit #{index}
-     * @param index
+     * @param length
      * @return
      */
-    public FastormSqlBuilder<T> limit(int index) {
-        return limit(index, 0);
+    public FastormSqlBuilder<T> limit(int length) {
+        return limit(0, length);
     }
 
     /**

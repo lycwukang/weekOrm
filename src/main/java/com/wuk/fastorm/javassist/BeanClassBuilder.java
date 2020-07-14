@@ -96,9 +96,9 @@ public class BeanClassBuilder {
         return this;
     }
 
-    public Class create() {
+    public Class create(Class<?> clazz) {
         try {
-            return ctClass.toClass();
+            return ctClass.toClass(clazz.getClassLoader(), null);
         } catch (Exception e) {
             throw new FastormJavassistException(ctClass, "生成class出错", e);
         }

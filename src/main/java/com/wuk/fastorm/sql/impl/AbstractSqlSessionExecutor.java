@@ -1,20 +1,20 @@
 package com.wuk.fastorm.sql.impl;
 
+import com.wuk.fastorm.data.ConnectionFind;
 import com.wuk.fastorm.exception.FastormSqlException;
 import com.wuk.fastorm.sql.AutoCloseableExecutor;
 import com.wuk.fastorm.sql.Sql;
 import com.wuk.fastorm.sql.SqlCreater;
 import org.slf4j.Logger;
 
-import java.sql.Connection;
 import java.sql.ResultSet;
 
 public abstract class AbstractSqlSessionExecutor {
 
-    private Connection connection;
+    private ConnectionFind connection;
     private SqlCreater sqlCreater;
 
-    public AbstractSqlSessionExecutor(Connection connection) {
+    public AbstractSqlSessionExecutor(ConnectionFind connection) {
         this.connection = connection;
     }
 

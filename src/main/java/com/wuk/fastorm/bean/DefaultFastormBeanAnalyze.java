@@ -19,19 +19,19 @@ public class DefaultFastormBeanAnalyze implements FastormBeanAnalyze {
     private static final Map<Class<?>, FastormBeanStructure<?>> ANALYZE_MAP = new ConcurrentHashMap<>(12);
 
     @Override
-    public <T> FastormBeanStructure<T> analyze(Class<T> clazz) {
+    public <T> FastormBeanLastOperateStructure<T> analyze(Class<T> clazz) {
         return analyze(new DefaultBeanAnalyze().analyze(clazz));
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    public <T> FastormBeanStructure<T> analyze(BeanStructure<T> beanStructure) {
+    public <T> FastormBeanLastOperateStructure<T> analyze(BeanStructure<T> beanStructure) {
         Class<?> clazz = beanStructure.getClazz();
 
         if (!ANALYZE_MAP.containsKey(clazz)) {
             ANALYZE_MAP.putIfAbsent(clazz, analyzeBean(beanStructure));
         }
-        return (FastormBeanStructure<T>) ANALYZE_MAP.get(clazz);
+        return new FastormBeanLastOperateStructure<>((FastormBeanStructure<T>) ANALYZE_MAP.get(clazz));
     }
 
     private <T> FastormBeanStructure<T> analyzeBean(BeanStructure<T> beanStructure) {

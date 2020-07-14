@@ -80,11 +80,8 @@ public class StandardSqlSqlTextSelectBuilder implements StandardSqlSqlTextBuilde
             }
         }
 
-        if (sql.getIndex() > 0) {
-            builder.append(String.format(" LIMIT %d", sql.getIndex()));
-            if (sql.getLength() > 0) {
-                builder.append(String.format(", %d", sql.getLength()));
-            }
+        if (sql.getLength() > 0) {
+            builder.append(String.format(" LIMIT %d, %d", sql.getIndex(), sql.getLength()));
         }
 
         return builder.toString();
