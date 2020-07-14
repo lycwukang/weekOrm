@@ -15,10 +15,6 @@ public class StandardSqlSqlTextInsertBuilder implements StandardSqlSqlTextBuilde
             throw new FastormSqlException("构建sql出错，未声明table名称");
         }
 
-        if (sql.getInsertFieldList().size() == 0) {
-            throw new FastormSqlException("构建sql出错，未设置insertFieldList");
-        }
-
         if (sql.getInsertDataList().size() == 0) {
             throw new FastormSqlException("构建sql出错，未设置insertDataList");
         }
