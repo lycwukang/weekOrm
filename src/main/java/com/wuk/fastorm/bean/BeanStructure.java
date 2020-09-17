@@ -109,7 +109,7 @@ public class BeanStructure<T> {
 
             ResultSetMetaData metaData = resultSet.getMetaData();
             for (int i = 0; i < metaData.getColumnCount(); i++) {
-                String columnName = metaData.getColumnName(i + 1);
+                String columnName = metaData.getColumnLabel(i + 1);
                 String fieldName = columnMapping.get(columnName);
                 if (fieldName != null) {
                     Method writeMethod = getWriteMethodMap().get(fieldName);
