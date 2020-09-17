@@ -109,12 +109,13 @@ public class BeanStructure<T> {
 
             ResultSetMetaData metaData = resultSet.getMetaData();
             for (int i = 0; i < metaData.getColumnCount(); i++) {
-                String columnName = metaData.getColumnLabel(i + 1);
+                int index = i + 1;
+                String columnName = metaData.getColumnLabel(index);
                 String fieldName = columnMapping.get(columnName);
                 if (fieldName != null) {
                     Method writeMethod = getWriteMethodMap().get(fieldName);
                     try {
-                        writeMethod.invoke(t, findValue(resultSet, columnName, getReadMethodMap().get(fieldName).getReturnType()));
+                        writeMethod.invoke(t, findValue(resultSet, index, getReadMethodMap().get(fieldName).getReturnType()));
                     } catch (Exception e) {
                         throw new FastormBeanBindException(getClazz(), "数据绑定出错", e);
                     }
@@ -126,94 +127,94 @@ public class BeanStructure<T> {
         return beanList;
     }
 
-    private Object findValue(ResultSet resultSet, String columnName, Class<?> clazz) throws SQLException {
+    private Object findValue(ResultSet resultSet, int index, Class<?> clazz) throws SQLException {
         if (clazz.equals(int.class) || clazz.equals(Integer.class)) {
-            return findInt(resultSet, columnName);
+            return findInt(resultSet, index);
         } else if (clazz.equals(long.class) || clazz.equals(Long.class)) {
-            return findLong(resultSet, columnName);
+            return findLong(resultSet, index);
         } else if (clazz.equals(float.class) || clazz.equals(Float.class)) {
-            return findFloat(resultSet, columnName);
+            return findFloat(resultSet, index);
         } else if (clazz.equals(double.class) || clazz.equals(Double.class)) {
-            return findDouble(resultSet, columnName);
+            return findDouble(resultSet, index);
         } else if (clazz.equals(boolean.class) || clazz.equals(Boolean.class)) {
-            return findBoolean(resultSet, columnName);
+            return findBoolean(resultSet, index);
         } else if (clazz.equals(String.class)) {
-            return findString(resultSet, columnName);
+            return findString(resultSet, index);
         } else if (clazz.equals(BigDecimal.class)) {
-            return findBigDecimal(resultSet, columnName);
+            return findBigDecimal(resultSet, index);
         } else if (clazz.equals(Date.class)) {
-            return findDate(resultSet, columnName);
+            return findDate(resultSet, index);
         }
 
         return null;
     }
 
-    private Integer findInt(ResultSet resultSet, String columnName) throws SQLException {
-        Object obj = resultSet.getObject(columnName);
+    private Integer findInt(ResultSet resultSet, int index) throws SQLException {
+        Object obj = resultSet.getObject(index);
         if (obj == null) {
             return null;
         }
-        return resultSet.getInt(columnName);
+        return resultSet.getInt(index);
     }
 
-    private Long findLong(ResultSet resultSet, String columnName) throws SQLException {
-        Object obj = resultSet.getObject(columnName);
+    private Long findLong(ResultSet resultSet, int index) throws SQLException {
+        Object obj = resultSet.getObject(index);
         if (obj == null) {
             return null;
         }
-        return resultSet.getLong(columnName);
+        return resultSet.getLong(index);
     }
 
-    private Float findFloat(ResultSet resultSet, String columnName) throws SQLException {
-        Object obj = resultSet.getObject(columnName);
+    private Float findFloat(ResultSet resultSet, int index) throws SQLException {
+        Object obj = resultSet.getObject(index);
         if (obj == null) {
             return null;
         }
-        return resultSet.getFloat(columnName);
+        return resultSet.getFloat(index);
     }
 
-    private Double findDouble(ResultSet resultSet, String columnName) throws SQLException {
-        Object obj = resultSet.getObject(columnName);
+    private Double findDouble(ResultSet resultSet, int index) throws SQLException {
+        Object obj = resultSet.getObject(index);
         if (obj == null) {
             return null;
         }
-        return resultSet.getDouble(columnName);
+        return resultSet.getDouble(index);
     }
 
-    private Boolean findBoolean(ResultSet resultSet, String columnName) throws SQLException {
-        Object obj = resultSet.getObject(columnName);
+    private Boolean findBoolean(ResultSet resultSet, int index) throws SQLException {
+        Object obj = resultSet.getObject(index);
         if (obj == null) {
             return null;
         }
-        return resultSet.getBoolean(columnName);
+        return resultSet.getBoolean(index);
     }
 
-    private String findString(ResultSet resultSet, String columnName) throws SQLException {
-        Object obj = resultSet.getObject(columnName);
+    private String findString(ResultSet resultSet, int index) throws SQLException {
+        Object obj = resultSet.getObject(index);
         if (obj == null) {
             return null;
         }
-        return resultSet.getString(columnName);
+        return resultSet.getString(index);
     }
 
-    private BigDecimal findBigDecimal(ResultSet resultSet, String columnName) throws SQLException {
-        Object obj = resultSet.getObject(columnName);
+    private BigDecimal findBigDecimal(ResultSet resultSet, int index) throws SQLException {
+        Object obj = resultSet.getObject(index);
         if (obj == null) {
             return null;
         }
-        return resultSet.getBigDecimal(columnName);
+        return resultSet.getBigDecimal(index);
     }
 
-    private Date findDate(ResultSet resultSet, String columnName) throws SQLException {
-        Object obj = resultSet.getObject(columnName);
+    private Date findDate(ResultSet resultSet, int index) throws SQLException {
+        Object obj = resultSet.getObject(index);
         if (obj == null) {
             return null;
         }
 
         if (obj instanceof Timestamp) {
-            return new Date(resultSet.getTimestamp(columnName).getTime());
+            return new Date(resultSet.getTimestamp(index).getTime());
         }
-        return resultSet.getDate(columnName);
+        return resultSet.getDate(index);
     }
 
     /**
